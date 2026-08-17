@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restea Automation — theme sample</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --kraft: #EDE6D6;
+    --kraft-deep: #E3DAC4;
+    --ink: #232323;
+    --route: #3F6B4F;
+    --route-deep: #2E5039;
+    --rust: #B5502E;
+    --slate: #5C6660;
+    --amber: #E8B93F;
+    --font-display: 'Barlow Semi Condensed', sans-serif;
+    --font-body: 'Source Serif 4', serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--kraft);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .eyebrow {
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 13px;
+    color: var(--route-deep);
+  }
+
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ---- nav ---- */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 0;
+    border-bottom: 1px solid rgba(35,35,35,0.12);
+  }
+  .wordmark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: 0.01em;
+  }
+  .wordmark svg { width: 28px; height: 20px; flex-shrink: 0; }
+  .navlinks {
+    display: flex;
+    gap: 28px;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.03em;
+  }
+  .navlinks a { color: var(--ink); text-decoration: none; opacity: 0.75; }
+  .navlinks a:hover { opacity: 1; }
+
+  /* ---- hero ---- */
+  header.hero {
+    padding: 96px 0 72px;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 56px;
+    align-items: center;
+  }
+  h1 {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 44px;
+    line-height: 1.18;
+    margin: 14px 0 22px;
+    letter-spacing: -0.01em;
+  }
+  .hero p.sub {
+    font-size: 17px;
+    color: var(--slate);
+    max-width: 460px;
+    margin-bottom: 30px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    font-size: 14px;
+    text-transform: uppercase;
+    background: var(--route);
+    color: var(--kraft);
+    padding: 14px 24px;
+    border-radius: 3px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .btn:hover { background: var(--route-deep); }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid rgba(35,35,35,0.3);
+    margin-left: 12px;
+  }
+  .btn.ghost:hover { border-color: var(--ink); background: rgba(35,35,35,0.04); }
+
+  .hero-line-box {
+    background: var(--kraft-deep);
+    border: 1px solid rgba(35,35,35,0.1);
+    border-radius: 4px;
+    padding: 28px 20px;
+  }
+  .hero-line-box svg { width: 100%; height: auto; display: block; }
+  .hero-line-caption {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--slate);
+    text-align: center;
+    margin-top: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .draw-path {
+    stroke-dasharray: 600;
+    stroke-dashoffset: 600;
+    animation: draw 2.4s ease forwards 0.3s;
+  }
+  @keyframes draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* ---- process (ledger) ---- */
+  section.process { padding: 64px 0; border-top: 1px solid rgba(35,35,35,0.12); }
+  .process-head { margin-bottom: 36px; }
+  .process-head h2 {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 26px;
+    margin-top: 8px;
+  }
+  .ledger-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 200px;
+    align-items: baseline;
+    gap: 20px;
+    padding: 22px 0;
+    border-bottom: 1px solid rgba(35,35,35,0.12);
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .ledger-row.is-visible { opacity: 1; transform: translateY(0); }
+  .ledger-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--rust);
+  }
+  .ledger-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+  }
+  .ledger-desc {
+    font-size: 15px;
+    color: var(--slate);
+    margin-top: 4px;
+    max-width: 480px;
+  }
+  .ledger-price {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    text-align: right;
+    color: var(--ink);
+  }
+
+  /* ---- stat strip ---- */
+  section.stats {
+    background: var(--ink);
+    color: var(--kraft);
+    padding: 48px 0;
+  }
+  .stats-note {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(237,230,214,0.5);
+    margin-bottom: 24px;
+    letter-spacing: 0.02em;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .stat-num {
+    font-family: var(--font-mono);
+    font-size: 34px;
+    color: var(--amber);
+  }
+  .stat-label {
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(237,230,214,0.7);
+    margin-top: 6px;
+  }
+
+  /* ---- divider ---- */
+  .divider {
+    padding: 40px 0;
+    display: flex;
+    justify-content: center;
+  }
+  .divider svg { width: 200px; height: 24px; }
+
+  /* ---- footer ---- */
+  footer {
+    padding: 56px 0 64px;
+    border-top: 1px solid rgba(35,35,35,0.12);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  footer h3 {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 24px;
+    max-width: 400px;
+  }
+  footer .foot-meta {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--slate);
+    text-align: right;
+  }
+
+  @media (max-width: 780px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr; gap: 32px; }
+    .ledger-row { grid-template-columns: 40px 1fr; }
+    .ledger-price { grid-column: 2; text-align: left; margin-top: 4px; }
+    footer { flex-direction: column; gap: 24px; align-items: flex-start; }
+    footer .foot-meta { text-align: left; }
+    h1 { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <div class="wordmark">
+      <svg viewBox="0 0 40 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 24 Q 8 10, 14 20 T 20 8" stroke="#B5502E" stroke-width="2" stroke-linecap="round"/>
+        <path d="M20 8 L 38 8" stroke="#3F6B4F" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Restea Automation
+    </div>
+    <div class="navlinks">
+      <a href="#">Work</a>
+      <a href="#">Process</a>
+      <a href="#">Contact</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">Automation for local businesses</div>
+        <h1>We find the repetitive part of your business and build something that does it instead.</h1>
+        <p class="sub">Not a big AI agency. One person, one problem at a time — audited, built, tested, and handed off, usually inside a couple of weeks.</p>
+        <a href="#" class="btn">Start with a free audit</a>
+        <a href="#" class="btn ghost">See the process</a>
+      </div>
+      <div class="hero-line-box">
+        <svg viewBox="0 0 320 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path class="draw-path" d="M10 130 Q 40 40, 65 110 Q 85 160, 105 90 Q 118 50, 130 80 L 310 80"
+            stroke="#B5502E" stroke-width="3" stroke-linecap="round" fill="none"/>
+          <circle cx="10" cy="130" r="4" fill="#B5502E"/>
+          <circle cx="130" cy="80" r="4" fill="#3F6B4F"/>
+          <circle cx="310" cy="80" r="5" fill="#3F6B4F"/>
+        </svg>
+        <div class="hero-line-caption">manual route → optimized route</div>
+      </div>
+    </div>
+  </header>
+
+  <section class="process">
+    <div class="process-head">
+      <div class="eyebrow">How an engagement runs</div>
+      <h2>Four steps, one problem at a time</h2>
+    </div>
+
+    <div class="ledger-row">
+      <div class="ledger-num">01</div>
+      <div>
+        <div class="ledger-title">Audit</div>
+        <div class="ledger-desc">A 30–60 minute conversation to find one specific, repeatable pain point — not a general pitch.</div>
+      </div>
+      <div class="ledger-price">Free — $150–300</div>
+    </div>
+
+    <div class="ledger-row">
+      <div class="ledger-num">02</div>
+      <div>
+        <div class="ledger-title">Proposal</div>
+        <div class="ledger-desc">A short, plain-language writeup: what gets built, what it saves you, and the price.</div>
+      </div>
+      <div class="ledger-price">Included</div>
+    </div>
+
+    <div class="ledger-row">
+      <div class="ledger-num">03</div>
+      <div>
+        <div class="ledger-title">Build</div>
+        <div class="ledger-desc">The actual automation, built and tested against your real data before you ever see it.</div>
+      </div>
+      <div class="ledger-price">$1,500–3,500</div>
+    </div>
+
+    <div class="ledger-row">
+      <div class="ledger-num">04</div>
+      <div>
+        <div class="ledger-title">Retainer</div>
+        <div class="ledger-desc">Ongoing monitoring, fixes, and small additions as your business changes.</div>
+      </div>
+      <div class="ledger-price">$300–800/mo</div>
+    </div>
+  </section>
+
+  <div class="divider">
+    <svg viewBox="0 0 200 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 18 Q 20 6, 35 16 Q 48 24, 60 12 L 198 12" stroke="#5C6660" stroke-width="1.5" fill="none" opacity="0.5"/>
+    </svg>
+  </div>
+</div>
+
+<section class="stats">
+  <div class="wrap">
+    <div class="stats-note">sample placeholder numbers — swap in real figures once case studies exist</div>
+    <div class="stats-grid">
+      <div>
+        <div class="stat-num">1</div>
+        <div class="stat-label">Route rebuilt end to end</div>
+      </div>
+      <div>
+        <div class="stat-num">8</div>
+        <div class="stat-label">Stops handled per run</div>
+      </div>
+      <div>
+        <div class="stat-num">0</div>
+        <div class="stat-label">Manual address lookups left</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <footer>
+    <h3>Have a repetitive, error-prone task eating your week?</h3>
+    <div class="foot-meta">restea automation<br>atlanta, ga · est. 2026</div>
+  </footer>
+</div>
+
+<script>
+  const rows = document.querySelectorAll('.ledger-row');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+      }
+    });
+  }, { threshold: 0.2 });
+  rows.forEach((row) => io.observe(row));
+</script>
+
+</body>
+</html>
