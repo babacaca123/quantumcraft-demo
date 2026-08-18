@@ -32,8 +32,11 @@ function storageKey(userId: string, fileName: string): string {
 
 /**
  * Spec §6: any sub or task can carry files — receipts, photos, plans, checks.
- * Receipt fields are typed in by hand in v1 (v2 pre-fills them by extraction);
- * either way nothing counts toward cost until "confirmed" is ticked.
+ *
+ * Only a receipt carries a price, so upload asks nothing but the file and
+ * whether it is one. When it is, the caller opens the details dialog once on
+ * the id returned here. v2 replaces the tick with extraction; the shape of the
+ * data does not change.
  */
 export async function uploadAttachment(
   _prev: ActionResult,
@@ -52,11 +55,7 @@ export async function uploadAttachment(
     return { error: "A file attaches to exactly one subcontractor or task." };
   }
 
-  const amount = num(formData.get("amount"));
-  const isConfirmed = formData.get("is_confirmed") === "on";
-  if (isConfirmed && amount == null) {
-    return { error: "Confirming a receipt needs an amount — that figure overrides the cost." };
-  }
+  const isReceipt = formData.get("is_receipt") === "on";
 
   const { supabase, project, userId } = await getOrCreateProject();
   const path = storageKey(userId, file.name);
@@ -67,21 +66,22 @@ export async function uploadAttachment(
 
   if (uploadError) return { error: uploadError.message };
 
-  const { error } = await supabase.from("attachments").insert({
-    user_id: userId,
-    project_id: project.id,
-    phase_id: phaseId,
-    subcontractor_id: subId,
-    task_id: taskId,
-    storage_path: path,
-    file_name: file.name,
-    mime_type: file.type || null,
-    size_bytes: file.size,
-    receipt_date: text(formData.get("receipt_date")),
-    vendor: text(formData.get("vendor")),
-    amount,
-    is_confirmed: isConfirmed,
-  });
+  const { data: row, error } = await supabase
+    .from("attachments")
+    .insert({
+      user_id: userId,
+      project_id: project.id,
+      phase_id: phaseId,
+      subcontractor_id: subId,
+      task_id: taskId,
+      storage_path: path,
+      file_name: file.name,
+      mime_type: file.type || null,
+      size_bytes: file.size,
+      is_receipt: isReceipt,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     // Don't leave an orphan object in the bucket if the row insert fails.
@@ -90,13 +90,15 @@ export async function uploadAttachment(
   }
 
   refresh();
-  return { ok: true };
+  // The id lets the panel pop the details dialog for a receipt exactly once.
+  return { ok: true, id: isReceipt ? row.id : undefined };
 }
 
 /**
- * Editing the extracted values and confirming them. Confirming is the moment the
+ * The receipt details, and confirming them. Confirming is the moment the
  * receipt's amount takes over from the manually-entered figure (spec §5) — which
- * is exactly why it is never applied silently.
+ * is exactly why it is never applied silently. Reachable any time from the
+ * file's "Details" button, so it never has to be got right on the first pass.
  */
 export async function updateAttachment(
   _prev: ActionResult,
@@ -115,6 +117,8 @@ export async function updateAttachment(
   const { error } = await supabase
     .from("attachments")
     .update({
+      // Filling anything in here makes it a receipt by definition.
+      is_receipt: true,
       receipt_date: text(formData.get("receipt_date")),
       vendor: text(formData.get("vendor")),
       amount,

@@ -21,20 +21,15 @@ export default async function ReportPage() {
   return (
     <>
       <section style={{ padding: "48px 0 24px" }}>
-        <div className="eyebrow">Final report</div>
-        <h1 className="page-title">Best offer, minus what the build cost.</h1>
-        <p className="sub">
-          Run it whenever you like — the total is live. Phases left open just mean more cost may
-          still land.
-        </p>
+        <h1 className="page-title">Final report</h1>
       </section>
 
       <section style={{ padding: "12px 0" }}>
         <div className="stats">
           <div className="stats-note">
             {openPhases > 0
-              ? `${openPhases} ${openPhases === 1 ? "phase is" : "phases are"} still open — this total will keep moving`
-              : "every phase marked complete"}
+              ? `${openPhases} of ${phases.length} phases still open`
+              : "every phase complete"}
           </div>
           <div className="stats-grid">
             <div>
@@ -57,7 +52,6 @@ export default async function ReportPage() {
 
       <section className="block">
         <div className="section-head">
-          <div className="eyebrow">The one number you enter</div>
           <h2>Best offer on the house</h2>
         </div>
         <BestOfferForm bestOffer={bestOffer} />
@@ -65,7 +59,6 @@ export default async function ReportPage() {
 
       <section className="block">
         <div className="section-head">
-          <div className="eyebrow">Where the money went</div>
           <h2>Cost by phase</h2>
         </div>
 

@@ -11,18 +11,17 @@ import {
   updateSub,
 } from "@/app/actions/tracker";
 import { AttachmentPanel } from "@/components/attachments/attachment-panel";
-import { DeleteButton, ErrorNote, Modal, SubmitButton, useAction } from "@/components/ui";
+import {
+  DeleteButton,
+  ErrorNote,
+  Modal,
+  SubmitButton,
+  useAction,
+  useCloseOnSuccess,
+} from "@/components/ui";
 import { CompleteSubDialog } from "@/components/subs/complete-sub-dialog";
 import { money, moneyOrDash, subCost } from "@/lib/costs";
 import type { ActionResult, SubWithDetail } from "@/lib/types";
-
-function useCloseOnSuccess(state: ActionResult, open: boolean, close: () => void) {
-  const wasOpen = useRef(false);
-  useEffect(() => {
-    if (open) wasOpen.current = true;
-    if (wasOpen.current && state.ok) close();
-  }, [state, open, close]);
-}
 
 export function SubSection({
   phaseId,
@@ -38,10 +37,7 @@ export function SubSection({
   return (
     <section className="block">
       <div className="section-head row spread wrapped gap-16">
-        <div>
-          <div className="eyebrow">Who is doing the work</div>
-          <h2>Subcontractors</h2>
-        </div>
+        <h2>Subcontractors</h2>
         <button
           type="button"
           className="iconbtn"
@@ -53,9 +49,7 @@ export function SubSection({
       </div>
 
       {subs.length === 0 ? (
-        <div className="empty">
-          No subs on this phase yet. The realtor on a land purchase goes here too.
-        </div>
+        <div className="empty">No subcontractors on this phase yet.</div>
       ) : (
         subs.map((sub) => (
           <SubRow key={sub.id} sub={sub} phaseId={phaseId} signedUrls={signedUrls} />
@@ -117,6 +111,7 @@ function SubRow({
           {sub.company ? <span>{sub.company}</span> : null}
           {sub.phone ? <span>{sub.phone}</span> : null}
           <span>bid {moneyOrDash(sub.bid_price)}</span>
+          {cost.changeOrders > 0 ? <span>+{money(cost.changeOrders)} change orders</span> : null}
         </div>
 
         {sub.change_orders.map((order) => (
@@ -157,10 +152,11 @@ function SubRow({
         <div>{money(cost.effective)}</div>
         {overridden ? (
           <div className="micro rust">receipt override</div>
-        ) : sub.is_complete ? (
-          <div className="micro">paid {moneyOrDash(sub.paid_amount)}</div>
+        ) : cost.isProjected ? (
+          // bid + change orders, until the actual paid figure replaces both
+          <div className="micro">projected</div>
         ) : (
-          <div className="micro">not paid yet</div>
+          <div className="micro route">paid</div>
         )}
       </div>
 
@@ -204,7 +200,6 @@ function SubDialog({
       open={open}
       onClose={onClose}
       title={sub ? "Edit subcontractor" : "New subcontractor"}
-      hint="the bid is one all-inclusive figure for this sub's full scope"
     >
       <form action={formAction} className="stack gap-16">
         {sub ? (
@@ -270,7 +265,6 @@ function ChangeOrderDialog({
       open={open}
       onClose={onClose}
       title="Change order"
-      hint="added scope on this sub — e.g. framing bid plus a storage unit"
     >
       <form action={formAction} className="stack gap-16">
         <input type="hidden" name="subcontractor_id" value={subId} />

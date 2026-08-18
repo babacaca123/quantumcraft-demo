@@ -69,6 +69,8 @@ export interface Attachment {
   file_name: string;
   mime_type: string | null;
   size_bytes: number | null;
+  /** Only a receipt carries a price. v2 sets this by extraction; v1 by a tick. */
+  is_receipt: boolean;
   receipt_date: string | null;
   vendor: string | null;
   amount: number | null;
@@ -96,4 +98,6 @@ export interface PhaseWithDetail extends Phase {
 export interface ActionResult {
   error?: string;
   ok?: boolean;
+  /** id of the row just created, so the caller can follow up on it. */
+  id?: string;
 }

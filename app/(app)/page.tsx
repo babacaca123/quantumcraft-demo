@@ -33,17 +33,12 @@ export default async function PhasesPage() {
   return (
     <>
       <section style={{ padding: "48px 0 8px" }}>
-        <div className="eyebrow">Owner-builder ledger</div>
-        <h1 className="page-title">Every phase of the build, and what it has cost so far.</h1>
-        <p className="sub">
-          Costs count the moment you enter them. Receipts are an override, not a gate — attach one
-          later and confirm it to correct the number.
-        </p>
+        <h1 className="page-title">The build</h1>
       </section>
 
       <section style={{ padding: "24px 0" }}>
         <div className="stats">
-          <div className="stats-note">running totals across every phase, including land purchase</div>
+          <div className="stats-note">running totals across every phase</div>
           <div className="stats-grid">
             <div>
               <div className="stat-num">{money(total)}</div>
@@ -66,8 +61,7 @@ export default async function PhasesPage() {
       <section className="block">
         <div className="section-head row spread wrapped gap-16">
           <div>
-            <div className="eyebrow">The build</div>
-            <h2>Phases, in your order</h2>
+            <h2>Phases</h2>
           </div>
           <AddPhaseForm />
         </div>

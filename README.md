@@ -23,7 +23,19 @@ type them — no receipt required, because checks mailed to subs rarely get
 photographed. If you later attach a receipt and tick **confirmed**, its amount
 replaces the hand-entered figure. Unconfirmed receipts never count.
 
-That rule lives in one place: [`lib/costs.ts`](./lib/costs.ts).
+**A subcontractor costs:**
+
+| State | Cost counted |
+| --- | --- |
+| Not yet paid | bid **+ every change order** — a projection |
+| Marked paid | the paid amount **alone** — the actual |
+
+Change orders stack on top of the main order, which is the whole point of them.
+But the figure entered when checking a sub off is what was actually handed over
+for the entire job, change orders included — so they stop stacking at that point
+rather than being billed twice.
+
+Both rules live in one place: [`lib/costs.ts`](./lib/costs.ts).
 
 ---
 
@@ -32,9 +44,12 @@ That rule lives in one place: [`lib/costs.ts`](./lib/costs.ts).
 ### 1. Create the Supabase project
 
 1. Create a new project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor** and run [`supabase/migrations/0001_init.sql`](./supabase/migrations/0001_init.sql).
-   This creates every table, turns on RLS scoped to `auth.uid()`, and creates the
-   private `attachments` storage bucket with matching policies.
+2. Open **SQL Editor** and run the migrations in `supabase/migrations/` in order:
+   - [`0001_init.sql`](./supabase/migrations/0001_init.sql) — every table, RLS
+     scoped to `auth.uid()`, and the private `attachments` storage bucket with
+     matching policies.
+   - [`0002_receipts.sql`](./supabase/migrations/0002_receipts.sql) — adds
+     `attachments.is_receipt`, so only a receipt carries a price.
 3. Under **Authentication → Users**, add the single user account (email +
    password). Under **Authentication → Sign In / Providers**, disable sign-ups —
    this is a single-user tool and there is no registration screen.
@@ -111,6 +126,8 @@ Ported from [`restea-theme-sample.html`](./restea-theme-sample.html) into
 [`app/globals.css`](./app/globals.css). The tokens and core conventions carry over
 unchanged so the app reads as the same system as the marketing site:
 
+- **Every control is outlined.** Inline actions are bordered chips, not bare
+  text, so a row of them reads as buttons rather than stray words.
 - **Palette:** kraft `#EDE6D6` / kraft-deep `#E3DAC4` / ink `#232323` /
   route `#3F6B4F` / route-deep `#2E5039` / rust `#B5502E` / slate `#5C6660` /
   amber `#E8B93F`
@@ -121,8 +138,13 @@ unchanged so the app reads as the same system as the marketing site:
   hand-drawn divider rule.
 
 Numbers are always mono, labels are always uppercase display, prose is always
-serif. New components (`.item`, `.subrow`, `.badge`, dialogs, form controls)
+serif. New components (`.item`, `.filetile`, `.badge`, dialogs, form controls)
 follow those same three rules.
+
+Files show themselves rather than just naming themselves: images render a real
+thumbnail from their signed URL, everything else gets a tile carrying its
+extension. **All Files** is a grid of those tiles — click one for the metadata,
+the receipt amount and the actions.
 
 ---
 

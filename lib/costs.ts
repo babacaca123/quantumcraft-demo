@@ -17,6 +17,9 @@ import type {
  * manual figure. Unconfirmed receipts never count: OCR misreads amounts, so the
  * user confirms before anything moves.
  *
+ * Change orders stack on top of a sub's main order until the sub is paid off;
+ * see subCost for why they stop stacking at that point.
+ *
  * Multiple confirmed receipts on one record sum rather than fight — a sub paid
  * in two checks is the common case.
  */
@@ -36,16 +39,41 @@ export interface CostBreakdown {
   receiptOverride: number | null;
 }
 
-/** A sub costs its paid amount (or receipt override) plus every change order. */
-export function subCost(sub: SubWithDetail): CostBreakdown {
-  const manual = Number(sub.paid_amount ?? 0);
-  const receiptOverride = confirmedTotal(sub.attachments);
+export interface SubCostBreakdown extends CostBreakdown {
+  /** The original bid — the "main order" a change order sits on top of. */
+  bid: number;
+  /** Every change order on this sub, summed. */
+  changeOrders: number;
+  /** True while the figure is still bid + change orders rather than what was paid. */
+  isProjected: boolean;
+}
+
+/**
+ * A sub costs:
+ *
+ *   before it is paid   bid + every change order   (a projection)
+ *   once it is paid     the paid amount, alone     (the actual)
+ *
+ * Change orders stack on top of the main order, which is the point of them.
+ * But the amount entered when checking a sub off is what was *actually handed
+ * over* for the whole job — main order and change orders together — so adding
+ * change orders on top of it would bill them twice.
+ */
+export function subCost(sub: SubWithDetail): SubCostBreakdown {
+  const bid = Number(sub.bid_price ?? 0);
   const changeOrders = sub.change_orders.reduce((sum, co) => sum + Number(co.amount ?? 0), 0);
+  const paid = sub.paid_amount == null ? null : Number(sub.paid_amount);
+
+  const manual = paid ?? bid + changeOrders;
+  const receiptOverride = confirmedTotal(sub.attachments);
 
   return {
-    effective: (receiptOverride ?? manual) + changeOrders,
-    manual: manual + changeOrders,
-    receiptOverride: receiptOverride == null ? null : receiptOverride + changeOrders,
+    effective: receiptOverride ?? manual,
+    manual,
+    receiptOverride,
+    bid,
+    changeOrders,
+    isProjected: paid == null,
   };
 }
 
@@ -72,7 +100,10 @@ export interface PhaseTotals {
 export function phaseTotals(phase: PhaseWithDetail): PhaseTotals {
   const subs = phase.subcontractors.reduce((sum, s) => sum + subCost(s).effective, 0);
   const tasks = phase.tasks.reduce((sum, t) => sum + taskCost(t).effective, 0);
-  const bid = phase.subcontractors.reduce((sum, s) => sum + Number(s.bid_price ?? 0), 0);
+  const bid = phase.subcontractors.reduce(
+    (sum, s) => sum + subCost(s).bid + subCost(s).changeOrders,
+    0,
+  );
 
   return { subs, tasks, total: subs + tasks, bid };
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useState } from "react";
 import { createPhase } from "@/app/actions/tracker";
-import { ErrorNote, Modal, SubmitButton } from "@/components/ui";
+import { ErrorNote, Modal, SubmitButton, useCloseOnSuccess } from "@/components/ui";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -12,12 +12,7 @@ import type { ActionResult } from "@/lib/types";
 export function AddPhaseForm() {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionResult, FormData>(createPhase, {});
-  const wasOpen = useRef(false);
-
-  useEffect(() => {
-    if (open) wasOpen.current = true;
-    if (wasOpen.current && state.ok) setOpen(false);
-  }, [state, open]);
+  useCloseOnSuccess(state, open, useCallback(() => setOpen(false), []));
 
   return (
     <>
@@ -29,7 +24,6 @@ export function AddPhaseForm() {
         open={open}
         onClose={() => setOpen(false)}
         title="New phase"
-        hint="foundation, framing, land purchase — whatever you call it"
       >
         <form action={formAction} className="stack gap-16">
           <label className="field">

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { completeTask } from "@/app/actions/tracker";
-import { ErrorNote, Modal, SubmitButton } from "@/components/ui";
+import { ErrorNote, Modal, SubmitButton, useCloseOnSuccess } from "@/components/ui";
 import type { ActionResult, TaskWithDetail } from "@/lib/types";
 
 function today(): string {
@@ -22,12 +22,7 @@ export function CompleteTaskDialog({
   onClose: () => void;
 }) {
   const [state, formAction] = useActionState<ActionResult, FormData>(completeTask, {});
-  const wasOpen = useRef(false);
-
-  useEffect(() => {
-    if (open) wasOpen.current = true;
-    if (wasOpen.current && state.ok) onClose();
-  }, [state, open, onClose]);
+  useCloseOnSuccess(state, open, onClose);
 
   return (
     <Modal open={open} onClose={onClose} title={`Complete “${task.title}”`}>

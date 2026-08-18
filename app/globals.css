@@ -219,21 +219,29 @@ h3 {
 .iconbtn.drag { cursor: grab; color: var(--slate); touch-action: none; }
 .iconbtn.drag:active { cursor: grabbing; }
 
+/* Inline actions (Edit, + Change order, Delete). Outlined rather than bare so
+   a row of them reads as controls instead of stray words. */
 .linkbtn {
-  background: none;
-  border: none;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  padding: 5px 10px;
   cursor: pointer;
   font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 13px;
-  letter-spacing: 0.03em;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--slate);
   text-decoration: none;
+  line-height: 1.4;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.linkbtn:hover { color: var(--ink); }
-.linkbtn.warn:hover { color: var(--rust); }
+.linkbtn:hover { color: var(--ink); border-color: var(--ink); background: var(--wash); }
+.linkbtn.warn:hover { color: var(--rust); border-color: var(--rust); }
 .linkbtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ---- surfaces ---- */
@@ -294,10 +302,13 @@ section.block {
   grid-template-columns: 26px 1fr auto;
   align-items: start;
   gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--rule);
+  padding: 16px 18px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--kraft);
+  margin-bottom: 10px;
 }
-.item:last-child { border-bottom: none; }
+.item:last-child { margin-bottom: 0; }
 .item-name {
   font-family: var(--font-display);
   font-weight: 600;
@@ -425,6 +436,20 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
   gap: 12px;
 }
 
+/* checkbox beside its explanation */
+.checkrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.checkrow:hover { background: var(--wash); }
+.block-text, .micro.block { display: block; margin-top: 3px; }
+
 /* ---- badges ---- */
 .badge {
   display: inline-flex;
@@ -490,13 +515,20 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ---- dialogs ---- */
 dialog {
+  /* the `* { margin: 0 }` reset above wipes out the UA stylesheet's
+     `dialog { margin: auto }`, which is the only thing centring a modal —
+     without it every dialog pins itself to the top-left corner. */
+  margin: auto;
   border: 1px solid var(--rule-strong);
   border-radius: 4px;
   background: var(--kraft);
   color: var(--ink);
   padding: 0;
-  width: min(520px, calc(100vw - 32px));
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
   font-family: var(--font-body);
+  box-shadow: 0 18px 50px rgba(35, 35, 35, 0.28);
 }
 dialog::backdrop { background: rgba(35, 35, 35, 0.45); }
 .dialog-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
@@ -518,14 +550,104 @@ dialog::backdrop { background: rgba(35, 35, 35, 0.45); }
 }
 .notice.ok { border-left-color: var(--route); }
 
+/* ---- files ---- */
+
+/* thumbnail: a real image where there is one, the extension where there is not */
+.thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  background: var(--kraft-deep);
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb.glyph {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--slate);
+}
+.thumb.glyph.pdf { color: var(--rust); }
+
+/* All Files: a grid of tiles you can recognise on sight */
 .filegrid {
   display: grid;
-  grid-template-columns: 130px 1fr 150px 130px;
-  gap: 16px;
-  align-items: baseline;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--rule);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
 }
+.filetile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 16px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--kraft);
+  cursor: pointer;
+  text-align: center;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.filetile:hover { border-color: var(--ink); background: var(--wash); }
+.filetile-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* the same file, small, on a sub or task row */
+.attachrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.filechip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 12px 6px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--kraft);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  max-width: 100%;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.filechip:hover { border-color: var(--ink); background: var(--wash); }
+.filechip-text { display: flex; flex-direction: column; min-width: 0; }
+.filechip-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* the big preview inside the detail sheet */
+.filestage {
+  display: flex;
+  justify-content: center;
+  padding: 18px;
+  background: var(--kraft-deep);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+a.filestage:hover { border-color: var(--ink); }
+.filepreview { display: flex; gap: 14px; align-items: flex-start; }
+
+/* label / value pairs in the detail sheet */
+.deflist {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 7px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.deflist dt { color: var(--slate); text-transform: uppercase; letter-spacing: 0.05em; }
+.deflist dd { color: var(--ink); word-break: break-word; }
 
 footer.appfoot {
   padding: 48px 0 56px;
@@ -542,18 +664,16 @@ footer.appfoot .foot-meta {
   text-align: right;
 }
 
-@media (max-width: 860px) {
-  .filegrid { grid-template-columns: 1fr 1fr; }
-}
-
 @media (max-width: 780px) {
   .wrap { padding: 0 20px; }
   .stats { padding: 32px 20px; }
   .stats-grid { grid-template-columns: 1fr; gap: 28px; }
   .ledger-row { grid-template-columns: 40px 1fr; }
   .ledger-price { grid-column: 2; text-align: left; margin-top: 4px; }
-  .item { grid-template-columns: 26px 1fr; }
+  .item { grid-template-columns: 26px 1fr; padding: 14px; }
   .item-amounts { grid-column: 2; text-align: left; margin-top: 6px; }
+  .filegrid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .deflist { grid-template-columns: 90px 1fr; }
   footer.appfoot { flex-direction: column; align-items: flex-start; }
   footer.appfoot .foot-meta { text-align: left; }
   h1, .page-title { font-size: 30px; }

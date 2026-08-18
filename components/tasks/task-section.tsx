@@ -19,17 +19,10 @@ import {
   PriorityBadge,
   SubmitButton,
   useAction,
+  useCloseOnSuccess,
 } from "@/components/ui";
 import { formatDate, moneyOrDash, taskCost } from "@/lib/costs";
 import type { ActionResult, TaskSort, TaskWithDetail } from "@/lib/types";
-
-function useCloseOnSuccess(state: ActionResult, open: boolean, close: () => void) {
-  const wasOpen = useRef(false);
-  useEffect(() => {
-    if (open) wasOpen.current = true;
-    if (wasOpen.current && state.ok) close();
-  }, [state, open, close]);
-}
 
 const SORT_LABELS: Record<TaskSort, string> = {
   manual: "Manual order",
@@ -68,10 +61,7 @@ export function TaskSection({
   return (
     <section className="block">
       <div className="section-head row spread wrapped gap-16">
-        <div>
-          <div className="eyebrow">What still has to happen</div>
-          <h2>Tasks</h2>
-        </div>
+        <h2>Tasks</h2>
 
         <div className="row gap-12">
           <label className="row gap-8">
@@ -99,14 +89,12 @@ export function TaskSection({
 
       {sort !== "manual" ? (
         <div className="micro" style={{ marginBottom: 12 }}>
-          sorted by {SORT_LABELS[sort].toLowerCase()} — drag a task to save a manual order instead
+          drag to save a manual order
         </div>
       ) : null}
 
       {order.length === 0 ? (
-        <div className="empty">
-          No tasks on this phase yet. Some cost money, some are just &ldquo;call Bob&rdquo;.
-        </div>
+        <div className="empty">No tasks on this phase yet.</div>
       ) : (
         <SortableList ids={order.map((t) => t.id)} onReorder={handleReorder}>
           {order.map((task) => (
@@ -227,7 +215,6 @@ function TaskDialog({
       open={open}
       onClose={onClose}
       title={task ? "Edit task" : "New task"}
-      hint="price is optional — a task with no price never touches the total"
     >
       <form action={formAction} className="stack gap-16">
         {task ? (

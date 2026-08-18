@@ -1,18 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState } from "react";
 import { updateAttachment } from "@/app/actions/files";
-import { ErrorNote, Modal, SubmitButton } from "@/components/ui";
+import { ErrorNote, Modal, SubmitButton, useCloseOnSuccess } from "@/components/ui";
+import { FilePreview } from "@/components/attachments/file-preview";
 import type { ActionResult, Attachment } from "@/lib/types";
-
-/** Closes a dialog once its action reports success. */
-export function useCloseOnSuccess(state: ActionResult, open: boolean, close: () => void) {
-  const wasOpen = useRef(false);
-  useEffect(() => {
-    if (open) wasOpen.current = true;
-    if (wasOpen.current && state.ok) close();
-  }, [state, open, close]);
-}
 
 /**
  * Date / vendor / amount — the three fields v2 will pre-fill by extraction
@@ -53,38 +45,39 @@ export function ReceiptFields({
         </label>
       </div>
 
-      <label className="row gap-8" style={{ alignItems: "flex-start" }}>
+      <label className="checkrow">
         <input type="checkbox" name="is_confirmed" defaultChecked={defaults?.is_confirmed} />
-        <span style={{ fontSize: 14 }}>
-          Confirmed — use this amount as the cost, overriding what was entered by hand.
-        </span>
+        <span>Confirmed — use this amount as the cost, overriding what was entered by hand.</span>
       </label>
     </>
   );
 }
 
-/** Edit the receipt details on a file that is already uploaded. */
+/**
+ * The receipt details on an uploaded file. Opens itself once right after a
+ * receipt is uploaded, and is reachable from the file's "Details" button
+ * forever after — so getting it wrong or skipping it the first time costs
+ * nothing.
+ */
 export function ReceiptEditDialog({
   file,
+  signedUrl,
   onClose,
 }: {
   file: Attachment | null;
+  signedUrl?: string | null;
   onClose: () => void;
 }) {
   const [state, formAction] = useActionState<ActionResult, FormData>(updateAttachment, {});
   useCloseOnSuccess(state, Boolean(file), onClose);
 
   return (
-    <Modal
-      open={Boolean(file)}
-      onClose={onClose}
-      title="Receipt details"
-      hint="confirming makes this amount override the figure entered by hand"
-    >
+    <Modal open={Boolean(file)} onClose={onClose} title="Receipt details">
       {file ? (
         <form action={formAction} className="stack gap-16" key={file.id}>
           <input type="hidden" name="id" value={file.id} />
-          <div className="micro">{file.file_name}</div>
+
+          <FilePreview file={file} signedUrl={signedUrl ?? null} />
 
           <ReceiptFields defaults={file} />
 
