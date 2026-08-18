@@ -41,6 +41,8 @@ export interface ChangeOrder {
   subcontractor_id: string;
   description: string;
   amount: number;
+  /** Raised after the sub was paid off, and since paid for on top of it. */
+  is_paid: boolean;
   created_at: string;
 }
 

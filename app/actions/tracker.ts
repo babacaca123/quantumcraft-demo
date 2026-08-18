@@ -176,6 +176,10 @@ export async function toggleSubFavorite(id: string, isFavorite: boolean): Promis
 /**
  * Spec §3: checking a sub off asks what was actually paid, which may be less
  * than the bid for incomplete or bad work. That figure counts immediately.
+ *
+ * It is all-in for everything on the sub right now, so every change order's
+ * "paid" tick resets — otherwise scope already inside this figure would be
+ * added on top of it a second time.
  */
 export async function completeSub(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const id = String(formData.get("id") ?? "");
@@ -191,6 +195,13 @@ export async function completeSub(_prev: ActionResult, formData: FormData): Prom
     .eq("id", id);
 
   if (error) return fail(error.message);
+
+  const { error: resetError } = await supabase
+    .from("change_orders")
+    .update({ is_paid: false })
+    .eq("subcontractor_id", id);
+
+  if (resetError) return fail(resetError.message);
   return ok();
 }
 
@@ -202,6 +213,14 @@ export async function uncompleteSub(id: string): Promise<ActionResult> {
     .eq("id", id);
 
   if (error) return fail(error.message);
+
+  // Back to a projection, where every change order counts through the bid.
+  const { error: resetError } = await supabase
+    .from("change_orders")
+    .update({ is_paid: false })
+    .eq("subcontractor_id", id);
+
+  if (resetError) return fail(resetError.message);
   return ok();
 }
 
@@ -234,6 +253,19 @@ export async function createChangeOrder(
     description,
     amount,
   });
+
+  if (error) return fail(error.message);
+  return ok();
+}
+
+/**
+ * Ticking a change order raised after the sub was settled adds it on top of the
+ * paid amount — the only way that scope reaches the total, short of re-entering
+ * the whole paid figure.
+ */
+export async function setChangeOrderPaid(id: string, isPaid: boolean): Promise<ActionResult> {
+  const { supabase } = await requireUser();
+  const { error } = await supabase.from("change_orders").update({ is_paid: isPaid }).eq("id", id);
 
   if (error) return fail(error.message);
   return ok();

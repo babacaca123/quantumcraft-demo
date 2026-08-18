@@ -3,6 +3,7 @@ import type {
   Attachment,
   PhaseWithDetail,
   Project,
+  SubWithDetail,
   TaskSort,
   TaskWithDetail,
 } from "@/lib/types";
@@ -14,6 +15,16 @@ const PHASE_SELECT = `
 `;
 
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 } as const;
+
+/**
+ * Spec §3: a favourite is a per-phase pin, so favourites rise to the top of the
+ * phase's sub list and everything else keeps its saved order underneath.
+ */
+export function sortSubs(subs: SubWithDetail[]): SubWithDetail[] {
+  return [...subs].sort(
+    (a, b) => Number(b.is_favorite) - Number(a.is_favorite) || a.position - b.position,
+  );
+}
 
 /** Applies a phase's saved sort mode. Manual order is the persisted `position`. */
 export function sortTasks(tasks: TaskWithDetail[], mode: TaskSort): TaskWithDetail[] {
@@ -51,7 +62,7 @@ export async function loadProject(): Promise<{ project: Project; phases: PhaseWi
   const phases = (data ?? []) as unknown as PhaseWithDetail[];
   for (const phase of phases) {
     phase.tasks = sortTasks(phase.tasks ?? [], phase.task_sort);
-    phase.subcontractors = phase.subcontractors ?? [];
+    phase.subcontractors = sortSubs(phase.subcontractors ?? []);
     for (const sub of phase.subcontractors) {
       sub.change_orders = sub.change_orders ?? [];
       sub.attachments = sub.attachments ?? [];

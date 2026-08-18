@@ -44,6 +44,8 @@ export interface SubCostBreakdown extends CostBreakdown {
   bid: number;
   /** Every change order on this sub, summed. */
   changeOrders: number;
+  /** Change orders raised after the sub was paid off and ticked as paid since. */
+  paidChangeOrders: number;
   /** True while the figure is still bid + change orders rather than what was paid. */
   isProjected: boolean;
 }
@@ -51,28 +53,37 @@ export interface SubCostBreakdown extends CostBreakdown {
 /**
  * A sub costs:
  *
- *   before it is paid   bid + every change order   (a projection)
- *   once it is paid     the paid amount, alone     (the actual)
+ *   before it is paid   bid + every change order            (a projection)
+ *   once it is paid     the paid amount + change orders
+ *                       raised since and ticked as paid     (the actual)
  *
  * Change orders stack on top of the main order, which is the point of them.
  * But the amount entered when checking a sub off is what was *actually handed
  * over* for the whole job — main order and change orders together — so adding
- * change orders on top of it would bill them twice.
+ * the change orders it already covers on top of it would bill them twice.
+ *
+ * Extra scope raised after that settlement is genuinely extra, so ticking it
+ * paid adds it on top. Re-entering the paid amount clears those ticks, because
+ * the new figure is all-in again (see completeSub).
  */
 export function subCost(sub: SubWithDetail): SubCostBreakdown {
   const bid = Number(sub.bid_price ?? 0);
   const changeOrders = sub.change_orders.reduce((sum, co) => sum + Number(co.amount ?? 0), 0);
+  const paidChangeOrders = sub.change_orders
+    .filter((co) => co.is_paid)
+    .reduce((sum, co) => sum + Number(co.amount ?? 0), 0);
   const paid = sub.paid_amount == null ? null : Number(sub.paid_amount);
 
-  const manual = paid ?? bid + changeOrders;
+  const manual = paid == null ? bid + changeOrders : paid + paidChangeOrders;
   const receiptOverride = confirmedTotal(sub.attachments);
 
   return {
-    effective: receiptOverride ?? manual,
+    effective: receiptOverride == null ? manual : receiptOverride + paidChangeOrders,
     manual,
     receiptOverride,
     bid,
     changeOrders,
+    paidChangeOrders,
     isProjected: paid == null,
   };
 }

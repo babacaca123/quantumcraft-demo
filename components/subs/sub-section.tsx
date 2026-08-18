@@ -6,6 +6,7 @@ import {
   createSub,
   deleteChangeOrder,
   deleteSub,
+  setChangeOrderPaid,
   toggleSubFavorite,
   uncompleteSub,
   updateSub,
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui";
 import { CompleteSubDialog } from "@/components/subs/complete-sub-dialog";
 import { money, moneyOrDash, subCost } from "@/lib/costs";
-import type { ActionResult, SubWithDetail } from "@/lib/types";
+import type { ActionResult, ChangeOrder, SubWithDetail } from "@/lib/types";
 
 export function SubSection({
   phaseId,
@@ -95,6 +96,7 @@ function SubRow({
       <div style={{ minWidth: 0 }}>
         <div className="row gap-8 wrapped">
           <span className={`item-name ${sub.is_complete ? "strike" : ""}`}>{sub.name}</span>
+          {sub.is_favorite ? <span className="badge fav">pinned</span> : null}
           <button
             type="button"
             className={`iconbtn bare star ${sub.is_favorite ? "on" : ""}`}
@@ -115,12 +117,7 @@ function SubRow({
         </div>
 
         {sub.change_orders.map((order) => (
-          <div key={order.id} className="subrow">
-            <span>change order</span>
-            <span>{order.description}</span>
-            <span className="amt">{money(order.amount)}</span>
-            <DeleteButton onDelete={() => deleteChangeOrder(order.id)} label="Remove" />
-          </div>
+          <ChangeOrderRow key={order.id} order={order} subIsPaid={sub.is_complete} />
         ))}
 
         <AttachmentPanel
@@ -155,6 +152,8 @@ function SubRow({
         ) : cost.isProjected ? (
           // bid + change orders, until the actual paid figure replaces both
           <div className="micro">projected</div>
+        ) : cost.paidChangeOrders > 0 ? (
+          <div className="micro route">paid +{money(cost.paidChangeOrders)} extra</div>
         ) : (
           <div className="micro route">paid</div>
         )}
@@ -174,6 +173,44 @@ function SubRow({
         onClose={() => setAddingChangeOrder(false)}
       />
     </div>
+  );
+}
+
+/**
+ * One change order. While the sub is still a projection every change order is
+ * already counted through the bid, so there is nothing to tick. Once the sub is
+ * settled the paid amount covers only what existed at the time — so scope added
+ * afterwards needs this tick to reach the total.
+ */
+function ChangeOrderRow({ order, subIsPaid }: { order: ChangeOrder; subIsPaid: boolean }) {
+  const { run, pending, error } = useAction();
+
+  return (
+    <>
+      <div className="subrow">
+        {subIsPaid ? (
+          <input
+            type="checkbox"
+            checked={order.is_paid}
+            disabled={pending}
+            aria-label={`Add ${order.description} to the paid total`}
+            title="Paid on top of the settled amount"
+            onChange={(e) => run(() => setChangeOrderPaid(order.id, e.target.checked))}
+          />
+        ) : null}
+
+        <span>change order</span>
+        <span>{order.description}</span>
+
+        <span className="amt">
+          {money(order.amount)}
+          {subIsPaid && !order.is_paid ? <span className="rust"> · not in total</span> : null}
+        </span>
+
+        <DeleteButton onDelete={() => deleteChangeOrder(order.id)} label="Remove" />
+      </div>
+      {error ? <div className="notice">{error}</div> : null}
+    </>
   );
 }
 

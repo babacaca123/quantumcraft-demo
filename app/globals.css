@@ -341,7 +341,7 @@ section.block {
 /* nested rows: change orders and attachments hanging off an item */
 .subrow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   padding: 5px 0 5px 14px;
   border-left: 2px solid var(--rule);
@@ -351,6 +351,7 @@ section.block {
   color: var(--slate);
 }
 .subrow .amt { margin-left: auto; color: var(--ink); white-space: nowrap; }
+.subrow input[type="checkbox"] { margin-top: 0; width: 15px; height: 15px; }
 .subrow a { color: var(--route-deep); }
 
 /* ---- form controls ---- */
@@ -469,6 +470,7 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
 .badge.medium { color: #8A6C17; }
 .badge.low { color: var(--slate); }
 .badge.done { color: var(--route-deep); }
+.badge.fav { color: #8A6C17; border-color: var(--amber); background: rgba(232, 185, 63, 0.16); }
 
 /* ---- stat strip (inverted ink band) ---- */
 .stats {

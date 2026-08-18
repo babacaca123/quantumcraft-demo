@@ -28,12 +28,20 @@ replaces the hand-entered figure. Unconfirmed receipts never count.
 | State | Cost counted |
 | --- | --- |
 | Not yet paid | bid **+ every change order** — a projection |
-| Marked paid | the paid amount **alone** — the actual |
+| Marked paid | the paid amount **+ any change order ticked paid since** |
 
 Change orders stack on top of the main order, which is the whole point of them.
 But the figure entered when checking a sub off is what was actually handed over
 for the entire job, change orders included — so they stop stacking at that point
 rather than being billed twice.
+
+Scope raised *after* that settlement is genuinely extra, so each change order on
+a settled sub carries a **paid** checkbox that adds it on top. Re-entering the
+paid amount clears every one of those ticks, because the new figure is all-in
+again.
+
+Favourited subs pin to the top of their phase's list; everything else keeps its
+saved order underneath.
 
 Both rules live in one place: [`lib/costs.ts`](./lib/costs.ts).
 
@@ -50,6 +58,8 @@ Both rules live in one place: [`lib/costs.ts`](./lib/costs.ts).
      matching policies.
    - [`0002_receipts.sql`](./supabase/migrations/0002_receipts.sql) — adds
      `attachments.is_receipt`, so only a receipt carries a price.
+   - [`0003_change_order_paid.sql`](./supabase/migrations/0003_change_order_paid.sql)
+     — adds `change_orders.is_paid`, for scope raised after a sub was settled.
 3. Under **Authentication → Users**, add the single user account (email +
    password). Under **Authentication → Sign In / Providers**, disable sign-ups —
    this is a single-user tool and there is no registration screen.
