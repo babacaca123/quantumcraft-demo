@@ -10,21 +10,29 @@
 
 const MAX_EDGE = 560;
 
+export interface Thumbnail {
+  /**
+   * The rendered picture as an object URL, or null if it could not be produced
+   * (a corrupt file, an expired signed URL, a PDF that wants a password).
+   * Callers fall back to the extension tile — a missing thumbnail is cosmetic.
+   */
+  url: string | null;
+  /** Page count, for a PDF that opened. Null for everything else. */
+  pages: number | null;
+}
+
+const EMPTY: Thumbnail = { url: null, pages: null };
+
 /** One promise per file, so the grid and the detail sheet share a single decode. */
-const cache = new Map<string, Promise<string | null>>();
+const cache = new Map<string, Promise<Thumbnail>>();
 
 export type ThumbnailKind = "pdf" | "heic";
 
-/**
- * The rendered thumbnail as an object URL, or null if it could not be produced
- * (a corrupt file, an expired signed URL, a PDF that wants a password). Callers
- * fall back to the extension tile on null — a missing thumbnail is cosmetic.
- */
-export function thumbnailFor(key: string, kind: ThumbnailKind, url: string): Promise<string | null> {
+export function thumbnailFor(key: string, kind: ThumbnailKind, url: string): Promise<Thumbnail> {
   const existing = cache.get(key);
   if (existing) return existing;
 
-  const pending = (kind === "pdf" ? renderPdfFirstPage(url) : renderHeic(url)).catch(() => null);
+  const pending = (kind === "pdf" ? renderPdfFirstPage(url) : renderHeic(url)).catch(() => EMPTY);
   cache.set(key, pending);
   return pending;
 }
@@ -47,7 +55,7 @@ function toObjectUrl(canvas: HTMLCanvasElement): Promise<string | null> {
 
 let workerPort: Worker | null = null;
 
-async function renderPdfFirstPage(url: string): Promise<string | null> {
+async function renderPdfFirstPage(url: string): Promise<Thumbnail> {
   const pdfjs = await import("pdfjs-dist");
 
   // One worker for the whole session. The bundler rewrites this URL to the
@@ -62,12 +70,13 @@ async function renderPdfFirstPage(url: string): Promise<string | null> {
   // Fetched here rather than handed to pdf.js as a URL: one plain GET beats the
   // ranged requests it would otherwise make against a signed storage URL.
   const response = await fetch(url);
-  if (!response.ok) return null;
+  if (!response.ok) return EMPTY;
   const data = new Uint8Array(await response.arrayBuffer());
 
   const loading = pdfjs.getDocument({ data });
   try {
     const doc = await loading.promise;
+    const pages = doc.numPages;
     const page = await doc.getPage(1);
     const base = page.getViewport({ scale: 1 });
     const { width, height, scale } = fit(base.width, base.height);
@@ -77,16 +86,16 @@ async function renderPdfFirstPage(url: string): Promise<string | null> {
     canvas.height = height;
 
     await page.render({ canvas, viewport: page.getViewport({ scale }) }).promise;
-    return await toObjectUrl(canvas);
+    return { url: await toObjectUrl(canvas), pages };
   } finally {
     // Frees the page and its fonts; the worker itself is kept for the next file.
     void loading.destroy();
   }
 }
 
-async function renderHeic(url: string): Promise<string | null> {
+async function renderHeic(url: string): Promise<Thumbnail> {
   const response = await fetch(url);
-  if (!response.ok) return null;
+  if (!response.ok) return EMPTY;
   const blob = await response.blob();
 
   // The CSP build: same decoder, no eval, so it keeps working if a Content-
@@ -100,7 +109,7 @@ async function renderHeic(url: string): Promise<string | null> {
     canvas.width = width;
     canvas.height = height;
     canvas.getContext("2d")?.drawImage(bitmap, 0, 0, width, height);
-    return await toObjectUrl(canvas);
+    return { url: await toObjectUrl(canvas), pages: null };
   } finally {
     bitmap.close();
   }

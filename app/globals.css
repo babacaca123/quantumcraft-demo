@@ -578,6 +578,56 @@ dialog::backdrop { background: rgba(35, 35, 35, 0.45); }
 /* the tile while its PDF or HEIC is being decoded */
 .thumb.glyph.working { color: var(--slate); font-size: 16px; }
 
+/* page count, sat beside a PDF's name wherever the name appears */
+.pagecount {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--slate);
+  white-space: nowrap;
+}
+.pagecount::before { content: " · "; }
+
+/* ---- the pile of paper ----
+   A file lifts and tilts under the cursor. A multi-page PDF does the same, and
+   its remaining pages spread out behind it like a hand of cards being fanned —
+   one sheet per page, up to .filestack's cap, with the rest of a long document
+   hidden behind the back sheet. */
+.filestack {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.filestack .thumb { position: relative; z-index: 2; }
+.filestack .sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  background: var(--kraft);
+  transform-origin: 50% 92%;
+  /* at rest: barely peeking out from behind the front page */
+  transform: translate(calc(var(--i) * 1.5px), calc(var(--i) * -1.5px));
+}
+.thumb, .filestack .sheet {
+  transition: transform 0.22s cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 0.22s ease;
+}
+.filetile:hover .thumb,
+.filechip:hover .thumb {
+  transform: rotate(-3deg) translateY(-5px);
+  box-shadow: 0 8px 18px rgba(35, 35, 35, 0.22);
+}
+.filetile:hover .filestack .sheet {
+  transform: rotate(calc(var(--i) * 6deg)) translate(calc(var(--i) * 5px), calc(var(--i) * -3px));
+  box-shadow: 0 6px 14px rgba(35, 35, 35, 0.14);
+}
+@media (prefers-reduced-motion: reduce) {
+  .thumb, .filestack .sheet { transition: none; }
+  .filetile:hover .thumb,
+  .filechip:hover .thumb,
+  .filetile:hover .filestack .sheet { transform: none; }
+}
+
 /* All Files: a grid of tiles you can recognise on sight */
 .filegrid {
   display: grid;
@@ -599,13 +649,16 @@ dialog::backdrop { background: rgba(35, 35, 35, 0.45); }
   color: inherit;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
-.filetile:hover { border-color: var(--ink); background: var(--wash); }
+/* lifted above its neighbours so a fanned pile is never clipped by the next tile */
+.filetile:hover { border-color: var(--ink); background: var(--wash); position: relative; z-index: 3; }
 .filetile-name {
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.4;
   word-break: break-word;
 }
+/* the fan needs somewhere to go, so the tile keeps room above the name */
+.filetile { padding-top: 20px; }
 
 /* the same file, small, on a sub or task row */
 .attachrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -646,6 +699,11 @@ dialog::backdrop { background: rgba(35, 35, 35, 0.45); }
   width: auto;
   height: auto;
   border-radius: 6px;
+  border: 1px solid var(--slate);
+}
+/* On a display that can draw one, take the border down to a true hairline. */
+@media (min-resolution: 2dppx) {
+  .filestage-img { border-width: 0.5px; }
 }
 a.filestage { cursor: zoom-in; }
 a.filestage:hover .filestage-img { opacity: 0.92; }
