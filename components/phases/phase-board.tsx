@@ -92,9 +92,6 @@ function PhaseRow({
               {phase.openTaskCount > 0 ? ` · ${phase.openTaskCount} open` : ""}
             </div>
             <div className="row gap-12" style={{ marginTop: 8 }}>
-              <Link href={`/phases/${phase.id}`} className="linkbtn">
-                Open
-              </Link>
               <DeleteButton
                 onDelete={() => deletePhase(phase.id)}
                 label="Delete phase"

@@ -5,9 +5,21 @@
  * a signed contract at a glance.
  */
 
+/**
+ * HEIC is what an iPhone shoots, so it turns up constantly on a build site — and
+ * no browser but Safari will draw one in an `<img>`. It is an image, but it has
+ * to be decoded first, so it is called out separately everywhere it matters.
+ */
+export function isHeic(mimeType: string | null | undefined, fileName?: string): boolean {
+  if (mimeType === "image/heic" || mimeType === "image/heif") return true;
+  return /\.(heic|heif)$/i.test(fileName ?? "");
+}
+
+/** An image the browser can render straight from its URL — HEIC excluded. */
 export function isImage(mimeType: string | null | undefined, fileName?: string): boolean {
+  if (isHeic(mimeType, fileName)) return false;
   if (mimeType?.startsWith("image/")) return true;
-  return /\.(png|jpe?g|gif|webp|avif|bmp|heic)$/i.test(fileName ?? "");
+  return /\.(png|jpe?g|gif|webp|avif|bmp)$/i.test(fileName ?? "");
 }
 
 export function isPdf(mimeType: string | null | undefined, fileName?: string): boolean {
@@ -22,6 +34,7 @@ export function fileExtension(fileName: string): string {
 
 /** A plain-language kind, for the detail view. */
 export function fileKind(mimeType: string | null | undefined, fileName: string): string {
+  if (isHeic(mimeType, fileName)) return "HEIC image";
   if (isImage(mimeType, fileName)) return "Image";
   if (isPdf(mimeType, fileName)) return "PDF document";
   if (/\.(docx?|odt|rtf)$/i.test(fileName)) return "Document";
