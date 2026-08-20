@@ -691,6 +691,10 @@ dialog::backdrop { background: rgba(35, 35, 35, 0.45); }
   display: flex;
   justify-content: center;
   align-items: center;
+  /* Shrink-wrapped to the file rather than stretched across the sheet, so the
+     link is the picture and not the empty margins either side of it. */
+  align-self: center;
+  max-width: 100%;
 }
 .filestage-img {
   display: block;
@@ -705,7 +709,7 @@ dialog::backdrop { background: rgba(35, 35, 35, 0.45); }
 @media (min-resolution: 2dppx) {
   .filestage-img { border-width: 0.5px; }
 }
-a.filestage { cursor: zoom-in; }
+a.filestage { cursor: pointer; }
 a.filestage:hover .filestage-img { opacity: 0.92; }
 .filepreview { display: flex; gap: 14px; align-items: flex-start; }
 
