@@ -10,6 +10,13 @@
 
 const MAX_EDGE = 560;
 
+/**
+ * What a receipt is downscaled to before it is sent off to be read. The API
+ * resamples anything longer than this anyway, and the small print on a till
+ * roll needs every pixel up to it.
+ */
+const READABLE_EDGE = 1568;
+
 export interface Thumbnail {
   /**
    * The rendered picture as an object URL, or null if it could not be produced
@@ -37,19 +44,15 @@ export function thumbnailFor(key: string, kind: ThumbnailKind, url: string): Pro
   return pending;
 }
 
-/** Scale to fit inside MAX_EDGE, never up — a thumbnail of a thumbnail is mush. */
-function fit(width: number, height: number) {
-  const scale = Math.min(1, MAX_EDGE / Math.max(width, height));
+/** Scale to fit inside `maxEdge`, never up — a thumbnail of a thumbnail is mush. */
+function fit(width: number, height: number, maxEdge = MAX_EDGE) {
+  const scale = Math.min(1, maxEdge / Math.max(width, height));
   return { width: Math.round(width * scale), height: Math.round(height * scale), scale };
 }
 
 function toObjectUrl(canvas: HTMLCanvasElement): Promise<string | null> {
   return new Promise((resolve) => {
-    canvas.toBlob(
-      (blob) => resolve(blob ? URL.createObjectURL(blob) : null),
-      "image/jpeg",
-      0.82,
-    );
+    canvas.toBlob((blob) => resolve(blob ? URL.createObjectURL(blob) : null), "image/jpeg", 0.82);
   });
 }
 
@@ -93,15 +96,44 @@ async function renderPdfFirstPage(url: string): Promise<Thumbnail> {
   }
 }
 
-async function renderHeic(url: string): Promise<Thumbnail> {
+/**
+ * A HEIC photo as a JPEG data URL, at reading rather than thumbnail size.
+ *
+ * Receipt extraction needs this because HEIC is the one format nothing else in
+ * the chain can open: the API does not decode it and neither does Node, but the
+ * browser already carries the decoder for thumbnails — so it converts, and the
+ * server gets a JPEG it can pass straight on.
+ */
+export async function heicAsJpegDataUrl(url: string): Promise<string | null> {
+  const bitmap = await decodeHeic(url);
+  if (!bitmap) return null;
+
+  try {
+    const { width, height } = fit(bitmap.width, bitmap.height, READABLE_EDGE);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.88);
+  } finally {
+    bitmap.close();
+  }
+}
+
+async function decodeHeic(url: string): Promise<ImageBitmap | null> {
   const response = await fetch(url);
-  if (!response.ok) return EMPTY;
+  if (!response.ok) return null;
   const blob = await response.blob();
 
   // The CSP build: same decoder, no eval, so it keeps working if a Content-
   // Security-Policy ever lands in front of this app.
   const { heicTo } = await import("heic-to/csp");
-  const bitmap = await heicTo({ blob, type: "bitmap" });
+  return heicTo({ blob, type: "bitmap" });
+}
+
+async function renderHeic(url: string): Promise<Thumbnail> {
+  const bitmap = await decodeHeic(url);
+  if (!bitmap) return EMPTY;
 
   try {
     const { width, height } = fit(bitmap.width, bitmap.height);

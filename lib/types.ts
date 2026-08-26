@@ -103,3 +103,15 @@ export interface ActionResult {
   /** id of the row just created, so the caller can follow up on it. */
   id?: string;
 }
+
+/**
+ * What `/api/extract-receipt` reads off a receipt (spec §6). Every field is
+ * nullable on purpose: an unreadable figure comes back empty rather than
+ * guessed, because the user is about to check it against real money.
+ */
+export interface Extraction {
+  /** YYYY-MM-DD, ready for an `<input type="date">`. */
+  date: string | null;
+  vendor: string | null;
+  amount: number | null;
+}

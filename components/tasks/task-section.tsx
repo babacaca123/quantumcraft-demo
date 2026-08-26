@@ -21,7 +21,7 @@ import {
   useAction,
   useCloseOnSuccess,
 } from "@/components/ui";
-import { formatDate, moneyOrDash, taskCost } from "@/lib/costs";
+import { formatDate, money, moneyOrDash, taskCost } from "@/lib/costs";
 import type { ActionResult, TaskSort, TaskWithDetail } from "@/lib/types";
 
 const SORT_LABELS: Record<TaskSort, string> = {
@@ -181,7 +181,16 @@ function TaskRow({
         ) : (
           <>
             <div>{moneyOrDash(cost.effective)}</div>
-            {overridden ? <div className="micro rust">receipt override</div> : null}
+            {overridden ? (
+              <>
+                <div className="micro rust">from receipts</div>
+                {/* What was typed in is untouched underneath; it only earns a
+                    line of its own when the receipts disagree with it. */}
+                {cost.disagrees && task.price != null ? (
+                  <div className="micro superseded">{money(cost.manual)} entered</div>
+                ) : null}
+              </>
+            ) : null}
           </>
         )}
       </div>

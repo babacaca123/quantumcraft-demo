@@ -39,6 +39,12 @@ export async function updateSession(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (!user && !isPublic) {
+    // A route handler's caller wants an answer, not a login page it would then
+    // try to parse as JSON.
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);

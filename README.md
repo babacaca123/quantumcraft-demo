@@ -79,6 +79,16 @@ Fill in from **Project Settings → API**:
 
 The anon key is safe in the browser — RLS is what protects the data.
 
+One more, from the [Anthropic Console](https://console.anthropic.com/settings/keys):
+
+| Variable | What it does |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | Reads date, vendor and amount off an uploaded receipt |
+
+It is read server-side only, in `/api/extract-receipt`, and never reaches the
+browser. Leave it out and everything still works — the receipt form just opens
+blank for you to fill in by hand.
+
 ### 3. Run it
 
 ```bash
@@ -94,6 +104,7 @@ Not yet deployed. From a clean checkout:
 vercel link
 vercel env add NEXT_PUBLIC_SUPABASE_URL production
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production
+vercel env add ANTHROPIC_API_KEY production
 vercel --prod
 ```
 
@@ -158,13 +169,34 @@ the receipt amount and the actions.
 
 ---
 
+## Receipt auto-extraction (spec §6)
+
+Tick **This is a receipt** on upload and the details dialog opens already
+reading the file. `/api/extract-receipt` fetches the bytes from Storage
+server-side — the browser only ever sends an attachment id — and asks Claude
+Haiku 4.5 for the date, the vendor and the grand total. Anything illegible comes
+back null rather than guessed.
+
+The result only fills the form in. Nothing counts toward a cost until you tick
+**confirmed** yourself.
+
+Confirming writes nothing back onto the sub or the task. `paid_amount` and
+`price` keep whatever you typed, and `lib/costs.ts` decides at display time which
+figure counts — the confirmed-receipt total when there is one, the hand-entered
+figure otherwise (spec §5). Where the two disagree the row shows both: the
+receipt total counting, the entered figure struck through beside it. Unconfirm or
+delete a receipt and it simply drops out of the sum.
+
+Two things it works around: HEIC, which nothing but the browser can decode, is
+converted to a JPEG client-side before it is sent; and a failed read is never a
+failed upload — the file is already saved, and the form simply opens blank.
+
+---
+
 ## What is not in V1
 
 Per spec §8 and §9, deliberately out of scope:
 
-- **Receipt auto-extraction (V2).** The date/vendor/amount fields and the
-  confirm step are already built and wired to the cost rule — V2 only has to
-  pre-fill them from OCR instead of the user typing them.
 - No sub-facing login. Subs never touch the tool.
 - No enforced phase sequencing or locking.
 - No multi-offer profit modelling — one best-offer number.

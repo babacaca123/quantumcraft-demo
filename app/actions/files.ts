@@ -97,8 +97,14 @@ export async function uploadAttachment(
 /**
  * The receipt details, and confirming them. Confirming is the moment the
  * receipt's amount takes over from the manually-entered figure (spec §5) — which
- * is exactly why it is never applied silently. Reachable any time from the
- * file's "Details" button, so it never has to be got right on the first pass.
+ * is exactly why it is never applied silently, and why extraction only ever
+ * fills the form in. Reachable any time from the file's chip, so it never has
+ * to be got right on the first pass.
+ *
+ * The override is a reading, never a write: nothing in this file touches
+ * `subcontractors.paid_amount` or `tasks.price`. Those hold what the user typed
+ * and keep holding it, and `lib/costs.ts` decides at display time which figure
+ * counts. That is what makes unconfirming or deleting a receipt reversible.
  */
 export async function updateAttachment(
   _prev: ActionResult,

@@ -32,17 +32,23 @@ export function AttachmentPanel({
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState<Attachment | null>(null);
   const [pendingReceiptId, setPendingReceiptId] = useState<string | null>(null);
+  const [freshReceiptId, setFreshReceiptId] = useState<string | null>(null);
 
   /**
    * The upload action hands back an id only when the file was flagged as a
    * receipt. Once revalidation delivers that row, open its details once — then
    * drop the id so it never opens itself again.
+   *
+   * `freshReceiptId` outlives that handover: it is what tells the dialog this
+   * file has never been read, so extraction runs on the upload and never again
+   * when the same receipt is reopened from its chip.
    */
   useEffect(() => {
     if (!pendingReceiptId) return;
     const uploaded = attachments.find((a) => a.id === pendingReceiptId);
     if (uploaded) {
       setEditing(uploaded);
+      setFreshReceiptId(uploaded.id);
       setPendingReceiptId(null);
     }
   }, [pendingReceiptId, attachments]);
@@ -92,7 +98,11 @@ export function AttachmentPanel({
       <ReceiptEditDialog
         file={editing}
         signedUrl={editing ? (signedUrls[editing.storage_path] ?? null) : null}
-        onClose={() => setEditing(null)}
+        extract={Boolean(editing) && editing?.id === freshReceiptId}
+        onClose={() => {
+          setEditing(null);
+          setFreshReceiptId(null);
+        }}
       />
     </>
   );
@@ -131,7 +141,9 @@ function UploadDialog({
 
         <label className="field">
           <span>File</span>
-          <input type="file" name="file" required />
+          {/* Photos and PDFs — the two things a receipt ever arrives as, and the
+              two the reader can look at. */}
+          <input type="file" name="file" accept="image/*,application/pdf" required />
         </label>
 
         <label className="checkrow">
@@ -139,7 +151,8 @@ function UploadDialog({
           <span>
             This is a receipt.
             <span className="micro block">
-              Only a receipt carries a price — you&rsquo;ll be asked for the amount next.
+              Only a receipt carries a price — the date, vendor and amount are read off it next, for
+              you to check.
             </span>
           </span>
         </label>

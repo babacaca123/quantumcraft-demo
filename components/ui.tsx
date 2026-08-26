@@ -73,14 +73,17 @@ export function SubmitButton({
   children,
   pendingLabel,
   className = "btn",
+  disabled = false,
 }: {
   children: React.ReactNode;
   pendingLabel?: string;
   className?: string;
+  /** Held shut for a reason of the form's own — a value still being fetched. */
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className={className} disabled={pending}>
+    <button type="submit" className={className} disabled={pending || disabled}>
       {pending ? (pendingLabel ?? "Saving…") : children}
     </button>
   );

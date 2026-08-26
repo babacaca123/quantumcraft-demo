@@ -114,6 +114,9 @@ h3 {
 .rust { color: var(--rust); }
 .route { color: var(--route-deep); }
 .strike { text-decoration: line-through; opacity: 0.55; }
+/* A hand-entered figure that confirmed receipts are standing in for. Struck
+   rather than dropped: the number is still on record, it just isn't counting. */
+.micro.superseded { text-decoration: line-through; opacity: 0.6; }
 
 /* ---- nav ---- */
 .appnav {

@@ -1,9 +1,4 @@
-import type {
-  Attachment,
-  PhaseWithDetail,
-  SubWithDetail,
-  TaskWithDetail,
-} from "@/lib/types";
+import type { Attachment, PhaseWithDetail, SubWithDetail, TaskWithDetail } from "@/lib/types";
 
 /**
  * Spec §5, the one rule the whole tracker turns on:
@@ -22,9 +17,19 @@ import type {
  *
  * Multiple confirmed receipts on one record sum rather than fight — a sub paid
  * in two checks is the common case.
+ *
+ * All of this happens here, at display time, and nowhere else. `paid_amount` and
+ * `price` hold what the user typed and are never written to by receipt activity,
+ * so unconfirming or deleting a receipt simply drops out of the sum below and
+ * the hand-entered figure is still there underneath it.
  */
 
-function confirmedTotal(attachments: Attachment[]): number | null {
+/**
+ * What the confirmed receipts on one record add up to, or null if there are
+ * none. Computed from the rows every time rather than stored, so it always
+ * reflects the receipts as they stand right now.
+ */
+export function confirmedReceiptTotal(attachments: Attachment[]): number | null {
   const confirmed = attachments.filter((a) => a.is_confirmed && a.amount != null);
   if (confirmed.length === 0) return null;
   return confirmed.reduce((sum, a) => sum + Number(a.amount), 0);
@@ -33,10 +38,20 @@ function confirmedTotal(attachments: Attachment[]): number | null {
 export interface CostBreakdown {
   /** What actually counts toward the total. */
   effective: number;
-  /** The hand-entered figure, kept so the UI can show what was overridden. */
+  /** The hand-entered figure, still on record and still exactly as it was typed. */
   manual: number;
   /** Set when confirmed receipts replaced the manual figure. */
   receiptOverride: number | null;
+  /**
+   * Receipts are counting *and* they disagree with what was entered by hand —
+   * the only case where showing the user both figures tells them anything.
+   */
+  disagrees: boolean;
+}
+
+/** Cents, so a float's last bit never reads as a disagreement. */
+function differ(a: number, b: number): boolean {
+  return Math.round(a * 100) !== Math.round(b * 100);
 }
 
 export interface SubCostBreakdown extends CostBreakdown {
@@ -75,12 +90,15 @@ export function subCost(sub: SubWithDetail): SubCostBreakdown {
   const paid = sub.paid_amount == null ? null : Number(sub.paid_amount);
 
   const manual = paid == null ? bid + changeOrders : paid + paidChangeOrders;
-  const receiptOverride = confirmedTotal(sub.attachments);
+  const receiptOverride = confirmedReceiptTotal(sub.attachments);
+
+  const effective = receiptOverride == null ? manual : receiptOverride + paidChangeOrders;
 
   return {
-    effective: receiptOverride == null ? manual : receiptOverride + paidChangeOrders,
+    effective,
     manual,
     receiptOverride,
+    disagrees: receiptOverride != null && differ(effective, manual),
     bid,
     changeOrders,
     paidChangeOrders,
@@ -91,12 +109,15 @@ export function subCost(sub: SubWithDetail): SubCostBreakdown {
 /** A task costs its price (or receipt override). Priced-at-nothing tasks never count. */
 export function taskCost(task: TaskWithDetail): CostBreakdown {
   const manual = Number(task.price ?? 0);
-  const receiptOverride = confirmedTotal(task.attachments);
+  const receiptOverride = confirmedReceiptTotal(task.attachments);
+
+  const effective = receiptOverride ?? manual;
 
   return {
-    effective: receiptOverride ?? manual,
+    effective,
     manual,
     receiptOverride,
+    disagrees: receiptOverride != null && differ(effective, manual),
   };
 }
 

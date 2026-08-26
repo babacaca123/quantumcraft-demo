@@ -148,7 +148,15 @@ function SubRow({
       <div className="item-amounts">
         <div>{money(cost.effective)}</div>
         {overridden ? (
-          <div className="micro rust">receipt override</div>
+          <>
+            <div className="micro rust">from receipts</div>
+            {/* The hand-entered figure is still on record and still exactly as
+                it was typed — it just isn't the one counting. Shown only when
+                it actually disagrees, so an agreeing receipt stays quiet. */}
+            {cost.disagrees && cost.manual > 0 ? (
+              <div className="micro superseded">{money(cost.manual)} entered</div>
+            ) : null}
+          </>
         ) : cost.isProjected ? (
           // bid + change orders, until the actual paid figure replaces both
           <div className="micro">projected</div>
