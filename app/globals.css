@@ -667,20 +667,43 @@ dialog::backdrop { background: rgba(35, 35, 35, 0.45); }
 .attachrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .filechip {
   display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 12px 6px 6px;
+  align-items: stretch;
   border: 1px solid var(--rule);
   border-radius: 3px;
   background: var(--kraft);
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  text-align: left;
   max-width: 100%;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .filechip:hover { border-color: var(--ink); background: var(--wash); }
+/* One outline around two controls: the file, and the bin that removes it. */
+.filechip-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 6px 5px 6px 6px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.filechip-trash {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0 9px;
+  border: 0;
+  border-left: 1px solid var(--rule);
+  background: transparent;
+  color: var(--slate);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+.filechip-trash:hover { color: var(--rust); opacity: 1; background: rgba(181, 80, 46, 0.09); }
 .filechip-text { display: flex; flex-direction: column; min-width: 0; }
 .filechip-name {
   font-family: var(--font-mono);

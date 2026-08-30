@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { uploadAttachment } from "@/app/actions/files";
+import { deleteAttachment, uploadAttachment } from "@/app/actions/files";
 import { ReceiptEditDialog } from "@/components/attachments/receipt-dialog";
 import { FileThumb } from "@/components/attachments/file-preview";
-import { ErrorNote, Modal, SubmitButton, useCloseOnSuccess } from "@/components/ui";
+import { ErrorNote, Modal, SubmitButton, useAction, useCloseOnSuccess } from "@/components/ui";
 import { money } from "@/lib/costs";
 import { shortName } from "@/lib/files";
 import type { ActionResult, Attachment } from "@/lib/types";
@@ -33,6 +33,7 @@ export function AttachmentPanel({
   const [editing, setEditing] = useState<Attachment | null>(null);
   const [pendingReceiptId, setPendingReceiptId] = useState<string | null>(null);
   const [freshReceiptId, setFreshReceiptId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<Attachment | null>(null);
 
   /**
    * The upload action hands back an id only when the file was flagged as a
@@ -58,24 +59,40 @@ export function AttachmentPanel({
       {attachments.length > 0 ? (
         <div className="attachrow">
           {attachments.map((file) => (
-            <button
-              key={file.id}
-              type="button"
-              className="filechip"
-              onClick={() => setEditing(file)}
-              title={file.file_name}
-            >
-              <FileThumb file={file} signedUrl={signedUrls[file.storage_path] ?? null} size={38} />
-              <span className="filechip-text">
-                <span className="filechip-name">{shortName(file.file_name, 22)}</span>
-                {file.is_receipt ? (
-                  <span className={`micro ${file.is_confirmed ? "route" : "rust"}`}>
-                    {file.amount != null ? money(file.amount) : "no amount"}
-                    {file.is_confirmed ? " · confirmed" : ""}
-                  </span>
-                ) : null}
-              </span>
-            </button>
+            <div key={file.id} className="filechip">
+              <button
+                type="button"
+                className="filechip-open"
+                onClick={() => setEditing(file)}
+                title={file.file_name}
+              >
+                <FileThumb
+                  file={file}
+                  signedUrl={signedUrls[file.storage_path] ?? null}
+                  size={38}
+                />
+                <span className="filechip-text">
+                  <span className="filechip-name">{shortName(file.file_name, 22)}</span>
+                  {file.is_receipt ? (
+                    <span className={`micro ${file.is_confirmed ? "route" : "rust"}`}>
+                      {file.amount != null ? money(file.amount) : "no amount"}
+                      {file.is_confirmed ? " · confirmed" : ""}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+
+              {/* Removing a file where it lives, rather than only from All Files. */}
+              <button
+                type="button"
+                className="filechip-trash"
+                aria-label={`Delete ${file.file_name}`}
+                title="Delete file"
+                onClick={() => setDeleting(file)}
+              >
+                <TrashIcon />
+              </button>
+            </div>
           ))}
         </div>
       ) : null}
@@ -104,7 +121,88 @@ export function AttachmentPanel({
           setFreshReceiptId(null);
         }}
       />
+
+      <DeleteFileDialog file={deleting} onClose={() => setDeleting(null)} />
     </>
+  );
+}
+
+/** A bin, drawn — the chip has no room to spell the word out. */
+function TrashIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M2.6 4h10.8" />
+      <path d="M6.4 4V2.7h3.2V4" />
+      <path d="M4.2 4l.6 9a1 1 0 0 0 1 .9h4.4a1 1 0 0 0 1-.9l.6-9" />
+      <path d="M6.7 6.8v4.5M9.3 6.8v4.5" />
+    </svg>
+  );
+}
+
+/**
+ * The bin arms this rather than firing: deleting takes the object out of the
+ * bucket along with its row, and nothing brings either back. A confirmed receipt
+ * earns a second line, because its amount is the one currently counting — losing
+ * it hands the phase total back to whatever was entered by hand (spec §5).
+ */
+function DeleteFileDialog({ file, onClose }: { file: Attachment | null; onClose: () => void }) {
+  const { run, pending, error } = useAction();
+
+  function handleDelete() {
+    if (!file) return;
+    const { id } = file;
+    run(async () => {
+      const result = await deleteAttachment(id);
+      if (!result.error) onClose();
+      return result;
+    });
+  }
+
+  return (
+    <Modal open={Boolean(file)} onClose={onClose} title="Delete file">
+      {file ? (
+        <div className="stack gap-16">
+          <p style={{ fontSize: 15 }}>
+            Delete <span className="mono">{file.file_name}</span>? This removes the file itself,
+            not just the link to it, and cannot be undone.
+          </p>
+
+          {file.is_confirmed && file.amount != null ? (
+            <div className="notice">
+              {money(file.amount)} counts toward this phase through this receipt. Deleting it hands
+              the total back to the amount entered by hand.
+            </div>
+          ) : null}
+
+          {error ? <div className="notice">{error}</div> : null}
+
+          <div className="dialog-foot">
+            <button type="button" className="btn ghost sm" onClick={onClose} disabled={pending}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn danger sm"
+              onClick={handleDelete}
+              disabled={pending}
+            >
+              {pending ? "Deleting…" : "Delete file"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </Modal>
   );
 }
 
