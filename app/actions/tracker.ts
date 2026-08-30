@@ -196,9 +196,13 @@ export async function completeSub(_prev: ActionResult, formData: FormData): Prom
 
   if (error) return fail(error.message);
 
+  // The figure just entered is all-in as of now, so every change order standing
+  // on this sub is inside it — settled, with nothing left to add on top. Saying
+  // so is what stops the same change order being counted twice: once through the
+  // paid amount, and again through a tick box that claimed it was left out.
   const { error: resetError } = await supabase
     .from("change_orders")
-    .update({ is_paid: false })
+    .update({ is_covered: true, is_paid: false })
     .eq("subcontractor_id", id);
 
   if (resetError) return fail(resetError.message);
@@ -214,10 +218,11 @@ export async function uncompleteSub(id: string): Promise<ActionResult> {
 
   if (error) return fail(error.message);
 
-  // Back to a projection, where every change order counts through the bid.
+  // Back to a projection, where every change order counts through the bid — so
+  // there is no paid amount left for any of them to be inside of.
   const { error: resetError } = await supabase
     .from("change_orders")
-    .update({ is_paid: false })
+    .update({ is_covered: false, is_paid: false })
     .eq("subcontractor_id", id);
 
   if (resetError) return fail(resetError.message);

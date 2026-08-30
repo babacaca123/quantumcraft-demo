@@ -186,12 +186,16 @@ function SubRow({
 
 /**
  * One change order. While the sub is still a projection every change order is
- * already counted through the bid, so there is nothing to tick. Once the sub is
- * settled the paid amount covers only what existed at the time — so scope added
- * afterwards needs this tick to reach the total.
+ * already counted through the bid, so there is nothing to tick.
+ *
+ * Settling the sub crosses them all off: the paid figure is all-in, so each one
+ * is inside it and adds nothing further. Only scope raised *after* that figure
+ * was entered is genuinely on top, and that is the one row left with a box —
+ * which is what keeps a covered change order from being billed twice.
  */
 function ChangeOrderRow({ order, subIsPaid }: { order: ChangeOrder; subIsPaid: boolean }) {
   const { run, pending, error } = useAction();
+  const covered = subIsPaid && order.is_covered;
 
   return (
     <>
@@ -199,20 +203,29 @@ function ChangeOrderRow({ order, subIsPaid }: { order: ChangeOrder; subIsPaid: b
         {subIsPaid ? (
           <input
             type="checkbox"
-            checked={order.is_paid}
-            disabled={pending}
-            aria-label={`Add ${order.description} to the paid total`}
-            title="Paid on top of the settled amount"
+            checked={covered || order.is_paid}
+            // Nothing to decide on a covered one: it is in the total already,
+            // and there is no second time to add it.
+            disabled={pending || covered}
+            aria-label={
+              covered
+                ? `${order.description} is covered by the paid amount`
+                : `Add ${order.description} to the paid total`
+            }
+            title={covered ? "Covered by the paid amount" : "Paid on top of the settled amount"}
             onChange={(e) => run(() => setChangeOrderPaid(order.id, e.target.checked))}
           />
         ) : null}
 
         <span>change order</span>
-        <span>{order.description}</span>
+        <span className={covered ? "strike" : ""}>{order.description}</span>
 
         <span className="amt">
           {money(order.amount)}
-          {subIsPaid && !order.is_paid ? <span className="rust"> · not in total</span> : null}
+          {covered ? <span className="route"> · in the paid amount</span> : null}
+          {subIsPaid && !covered && !order.is_paid ? (
+            <span className="rust"> · not in total</span>
+          ) : null}
         </span>
 
         <DeleteButton onDelete={() => deleteChangeOrder(order.id)} label="Remove" />

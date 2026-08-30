@@ -77,15 +77,22 @@ export interface SubCostBreakdown extends CostBreakdown {
  * over* for the whole job — main order and change orders together — so adding
  * the change orders it already covers on top of it would bill them twice.
  *
+ * Which is why settling a sub marks every change order on it covered: covered
+ * scope is inside the paid figure and adds nothing further, and the row says so
+ * instead of offering a tick that would bill it a second time.
+ *
  * Extra scope raised after that settlement is genuinely extra, so ticking it
- * paid adds it on top. Re-entering the paid amount clears those ticks, because
- * the new figure is all-in again (see completeSub).
+ * paid adds it on top. Re-entering the paid amount covers everything again and
+ * clears those ticks, because the new figure is all-in as of then (see
+ * completeSub).
  */
 export function subCost(sub: SubWithDetail): SubCostBreakdown {
   const bid = Number(sub.bid_price ?? 0);
   const changeOrders = sub.change_orders.reduce((sum, co) => sum + Number(co.amount ?? 0), 0);
+  // Covered is checked as well as ticked, so no combination of the two flags can
+  // put a change order into the total twice.
   const paidChangeOrders = sub.change_orders
-    .filter((co) => co.is_paid)
+    .filter((co) => co.is_paid && !co.is_covered)
     .reduce((sum, co) => sum + Number(co.amount ?? 0), 0);
   const paid = sub.paid_amount == null ? null : Number(sub.paid_amount);
 

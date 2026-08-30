@@ -43,6 +43,8 @@ export interface ChangeOrder {
   amount: number;
   /** Raised after the sub was paid off, and since paid for on top of it. */
   is_paid: boolean;
+  /** Already inside the sub's paid amount, so it adds nothing further. */
+  is_covered: boolean;
   created_at: string;
 }
 
