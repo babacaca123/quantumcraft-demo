@@ -6,6 +6,7 @@ import { deletePhase, reorderPhases, setPhaseComplete } from "@/app/actions/trac
 import { SortableList, SortableRow } from "@/components/sortable";
 import { DeleteButton, useAction } from "@/components/ui";
 import { money } from "@/lib/costs";
+import type { Split } from "@/lib/costs";
 
 export interface PhaseSummary {
   id: string;
@@ -14,7 +15,7 @@ export interface PhaseSummary {
   subCount: number;
   taskCount: number;
   openTaskCount: number;
-  total: number;
+  total: Split;
   bid: number;
 }
 
@@ -103,8 +104,15 @@ function PhaseRow({
       </div>
 
       <div className="ledger-price">
-        <div>{money(phase.total)}</div>
-        {phase.bid > 0 ? <div className="micro">{money(phase.bid)} bid</div> : null}
+        <div>{money(phase.total.actual)}</div>
+        {phase.total.projected !== phase.total.actual ? (
+          <div className="micro">{money(phase.total.projected)} projected</div>
+        ) : null}
+        {/* Only when it says something the projection does not: on an untouched
+            phase the two are the same number twice. */}
+        {phase.bid > 0 && phase.bid !== phase.total.projected ? (
+          <div className="micro">{money(phase.bid)} bid</div>
+        ) : null}
         {phase.isComplete ? <div className="micro route">phase closed</div> : null}
       </div>
     </>

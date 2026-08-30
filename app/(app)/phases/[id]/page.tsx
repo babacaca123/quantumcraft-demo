@@ -40,9 +40,13 @@ export default async function PhasePage({ params }: { params: Promise<{ id: stri
         name={phase.name}
         isComplete={phase.is_complete}
         totals={{
-          subs: money(totals.subs),
-          tasks: money(totals.tasks),
-          total: money(totals.total),
+          subs: money(totals.subs.actual),
+          tasks: money(totals.tasks.actual),
+          total: money(totals.total.actual),
+          projected:
+            totals.total.projected === totals.total.actual
+              ? null
+              : money(totals.total.projected),
           bid: totals.bid > 0 ? money(totals.bid) : null,
         }}
       />

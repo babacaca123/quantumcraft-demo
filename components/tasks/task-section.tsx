@@ -180,7 +180,7 @@ function TaskRow({
           <div className="micro">no cost</div>
         ) : (
           <>
-            <div>{moneyOrDash(cost.effective)}</div>
+            <div>{moneyOrDash(cost.projected)}</div>
             {overridden ? (
               <>
                 <div className="micro rust">from receipts</div>
@@ -190,7 +190,11 @@ function TaskRow({
                   <div className="micro superseded">{money(cost.manual)} entered</div>
                 ) : null}
               </>
-            ) : null}
+            ) : task.is_complete ? null : (
+              // Priced but not done, so the money has not gone anywhere yet —
+              // the same thing the sub rows say about an unsettled bid.
+              <div className="micro">projected</div>
+            )}
           </>
         )}
       </div>

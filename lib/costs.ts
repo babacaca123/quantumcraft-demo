@@ -6,13 +6,27 @@ import type { Attachment, PhaseWithDetail, SubWithDetail, TaskWithDetail } from 
  *   The manually-entered number is the default source of truth.
  *   A confirmed receipt is an override, not a gate.
  *
- * So a sub's paid amount and a task's price count the moment they are typed in,
- * with no receipt required — checks mailed to subs rarely get photographed. If
+ * So the figure entered on settling a sub, and the price on a task once it is
+ * ticked off, count the moment they are typed in, with no receipt required —
+ * checks mailed to subs rarely get photographed. If
  * confirmed receipts later show up on that record, their total replaces the
  * manual figure outright — on a sub that means the bid, the change orders and
  * the paid amount all at once, because a receipt is money that actually left the
  * account and the rest is bookkeeping. Unconfirmed receipts never count: OCR
  * misreads amounts, so the user confirms before anything moves.
+ *
+ * Every record costs two numbers, and they are not the same question:
+ *
+ *   actual      money that has gone out. Receipts, and the figure entered on
+ *               settling a sub or finishing a task. Nothing else — an open sub
+ *               with a bid on it has cost nothing yet.
+ *   projected   what it is heading for: the actual where that is known, the bid
+ *               or the price until then.
+ *
+ * They meet once everything is settled. Until then the gap between them is the
+ * work still to pay for, which is the number a build actually runs on — so both
+ * are carried the whole way up, phase by phase, rather than one being folded
+ * into the other and argued about later.
  *
  * Change orders stack on top of a sub's main order until the sub is paid off;
  * see subCost for why they stop stacking at that point.
@@ -37,9 +51,17 @@ export function confirmedReceiptTotal(attachments: Attachment[]): number | null 
   return confirmed.reduce((sum, a) => sum + Number(a.amount), 0);
 }
 
+/** The same cost asked two ways. See the note above. */
+export interface Split {
+  actual: number;
+  projected: number;
+}
+
 export interface CostBreakdown {
-  /** What actually counts toward the total. */
-  effective: number;
+  /** Money out on this record. Zero until something settles it. */
+  actual: number;
+  /** Where it is heading: the actual where known, the estimate until then. */
+  projected: number;
   /** The hand-entered figure, still on record and still exactly as it was typed. */
   manual: number;
   /** Set when confirmed receipts replaced the manual figure. */
@@ -120,22 +142,29 @@ export function subCost(sub: SubWithDetail): SubCostBreakdown {
     .filter((co) => !co.is_covered)
     .reduce((sum, co) => sum + Number(co.amount ?? 0), 0);
 
-  const manual = paid == null ? bid + changeOrders : paid + paidChangeOrders;
+  const settled = paid == null ? null : paid + paidChangeOrders;
+  const manual = settled ?? bid + changeOrders;
   // Unpaid, nothing is covered and this is the projection again; paid off, it is
   // that figure plus whatever scope has been raised since.
   const allIn = (paid ?? bid) + uncoveredChangeOrders;
   const receiptOverride = confirmedReceiptTotal(sub.attachments);
 
-  // Receipts win outright. Not the bid, not the paid amount, and nothing added
-  // on top for change orders: what the receipts come to is what the sub cost.
-  const effective = receiptOverride ?? manual;
-  const gap = receiptOverride == null ? 0 : round2(effective - manual);
+  // Receipts win outright, for both questions. Not the bid, not the paid amount,
+  // and nothing added on top for change orders: what the receipts come to is
+  // what the sub cost.
+  //
+  // Failing receipts, a settled sub has cost what was entered on settling it,
+  // and an open one has cost nothing at all — its bid is a plan, not a payment.
+  const actual = receiptOverride ?? settled ?? 0;
+  const projected = receiptOverride ?? manual;
+  const gap = receiptOverride == null ? 0 : round2(projected - manual);
 
   return {
-    effective,
+    actual,
+    projected,
     manual,
     receiptOverride,
-    disagrees: receiptOverride != null && differ(effective, manual),
+    disagrees: receiptOverride != null && differ(projected, manual),
     bid,
     changeOrders,
     paidChangeOrders,
@@ -151,42 +180,68 @@ export function subCost(sub: SubWithDetail): SubCostBreakdown {
   };
 }
 
-/** A task costs its price (or receipt override). Priced-at-nothing tasks never count. */
+/**
+ * A task costs its price, or its receipts. Priced-at-nothing tasks never count.
+ *
+ * An unticked task has cost nothing yet for the same reason an open sub has:
+ * "call Bob about the slab pour, $500" is money owed, not money gone.
+ */
 export function taskCost(task: TaskWithDetail): CostBreakdown {
   const manual = Number(task.price ?? 0);
   const receiptOverride = confirmedReceiptTotal(task.attachments);
 
-  const effective = receiptOverride ?? manual;
+  const actual = receiptOverride ?? (task.is_complete ? manual : 0);
+  const projected = receiptOverride ?? manual;
 
   return {
-    effective,
+    actual,
+    projected,
     manual,
     receiptOverride,
-    disagrees: receiptOverride != null && differ(effective, manual),
+    disagrees: receiptOverride != null && differ(projected, manual),
   };
 }
 
 export interface PhaseTotals {
-  subs: number;
-  tasks: number;
-  total: number;
-  /** Bid prices on record for this phase — shown alongside actuals, never counted. */
+  subs: Split;
+  tasks: Split;
+  total: Split;
+  /** Bid prices on record for this phase — shown alongside the figures, never counted. */
   bid: number;
 }
 
+function add(parts: CostBreakdown[]): Split {
+  return {
+    actual: parts.reduce((sum, p) => sum + p.actual, 0),
+    projected: parts.reduce((sum, p) => sum + p.projected, 0),
+  };
+}
+
 export function phaseTotals(phase: PhaseWithDetail): PhaseTotals {
-  const subs = phase.subcontractors.reduce((sum, s) => sum + subCost(s).effective, 0);
-  const tasks = phase.tasks.reduce((sum, t) => sum + taskCost(t).effective, 0);
+  const subs = add(phase.subcontractors.map(subCost));
+  const tasks = add(phase.tasks.map(taskCost));
   const bid = phase.subcontractors.reduce(
     (sum, s) => sum + subCost(s).bid + subCost(s).changeOrders,
     0,
   );
 
-  return { subs, tasks, total: subs + tasks, bid };
+  return {
+    subs,
+    tasks,
+    total: {
+      actual: subs.actual + tasks.actual,
+      projected: subs.projected + tasks.projected,
+    },
+    bid,
+  };
 }
 
-export function projectTotal(phases: PhaseWithDetail[]): number {
-  return phases.reduce((sum, phase) => sum + phaseTotals(phase).total, 0);
+export function projectTotal(phases: PhaseWithDetail[]): Split {
+  const totals = phases.map(phaseTotals);
+  return {
+    actual: totals.reduce((sum, t) => sum + t.total.actual, 0),
+    projected: totals.reduce((sum, t) => sum + t.total.projected, 0),
+  };
 }
 
 // ---------------------------------------------------------------- formatting

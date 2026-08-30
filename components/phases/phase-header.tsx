@@ -13,7 +13,14 @@ export function PhaseHeader({
   phaseId: string;
   name: string;
   isComplete: boolean;
-  totals: { subs: string; tasks: string; total: string; bid: string | null };
+  totals: {
+    subs: string;
+    tasks: string;
+    total: string;
+    /** Null once everything here is settled and the two figures have met. */
+    projected: string | null;
+    bid: string | null;
+  };
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
@@ -71,7 +78,8 @@ export function PhaseHeader({
       <div className="panel row wrapped gap-24 spread" style={{ marginTop: 20 }}>
         <Figure label="Subcontractors" value={totals.subs} />
         <Figure label="Tasks" value={totals.tasks} />
-        <Figure label="Phase total" value={totals.total} strong />
+        <Figure label="Spent so far" value={totals.total} strong />
+        {totals.projected ? <Figure label="Projected" value={totals.projected} /> : null}
         {totals.bid ? <Figure label="Bids on record" value={totals.bid} muted /> : null}
       </div>
     </section>

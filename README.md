@@ -21,14 +21,28 @@ Auth) · Vercel.
 A sub's paid amount and a task's price count toward the phase total the moment you
 type them — no receipt required, because checks mailed to subs rarely get
 photographed. If you later attach a receipt and tick **confirmed**, its amount
-replaces the hand-entered figure. Unconfirmed receipts never count.
+replaces the hand-entered figure, for the whole sub — bid, change orders and all.
+Unconfirmed receipts never count.
+
+**Every total is two numbers, and they answer different questions:**
+
+| | What it counts |
+| --- | --- |
+| **Spent so far** | money that has gone out: receipts, settled subs, ticked-off tasks |
+| **Projected** | the same, plus the bid on every sub not settled yet |
+
+They meet when the last sub is checked off. Until then the difference between
+them is the work still to pay for. Profit on the report is struck against what
+has been **spent**, never the projection — a projected profit is a guess wearing
+the same clothes as a fact.
 
 **A subcontractor costs:**
 
-| State | Cost counted |
-| --- | --- |
-| Not yet paid | bid **+ every change order** — a projection |
-| Marked paid | the paid amount **+ any change order ticked paid since** |
+| State | Spent | Projected |
+| --- | --- | --- |
+| Not yet paid | nothing | bid **+ every change order** |
+| Marked paid | the paid amount **+ any change order ticked paid since** | the same |
+| Receipts confirmed | the receipt total | the same |
 
 Change orders stack on top of the main order, which is the whole point of them.
 But the figure entered when checking a sub off is what was actually handed over
@@ -43,7 +57,7 @@ again.
 Favourited subs pin to the top of their phase's list; everything else keeps its
 saved order underneath.
 
-Both rules live in one place: [`lib/costs.ts`](./lib/costs.ts).
+All of this lives in one place: [`lib/costs.ts`](./lib/costs.ts).
 
 ---
 

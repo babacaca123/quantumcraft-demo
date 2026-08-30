@@ -41,8 +41,11 @@ export default async function PhasesPage() {
           <div className="stats-note">running totals across every phase</div>
           <div className="stats-grid">
             <div>
-              <div className="stat-num">{money(total)}</div>
-              <div className="stat-label">Total cost to date</div>
+              <div className="stat-num">{money(total.actual)}</div>
+              <div className="stat-label">Spent so far</div>
+              {/* The rest of it is still to pay for. Kept in view rather than
+                  folded in, so neither number has to stand for both. */}
+              <div className="stat-sub">{money(total.projected)} projected</div>
             </div>
             <div>
               <div className="stat-num">

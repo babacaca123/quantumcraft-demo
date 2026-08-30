@@ -534,6 +534,14 @@ input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
   line-height: 1.2;
 }
 .stat-num.neg { color: var(--rust); }
+/* the second figure under a stat — the projection beside the spend */
+.stat-sub {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(237, 230, 214, 0.55);
+  margin-top: 5px;
+  letter-spacing: 0.02em;
+}
 .stat-label {
   font-family: var(--font-display);
   font-size: 13px;

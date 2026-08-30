@@ -154,7 +154,7 @@ function SubRow({
       </div>
 
       <div className="item-amounts">
-        <div>{money(cost.effective)}</div>
+        <div>{money(cost.projected)}</div>
         {overridden ? (
           <>
             <div className="micro rust">from receipts</div>
@@ -338,7 +338,8 @@ function CostGapDialog({
     <Modal open={open} onClose={onClose} title="Totals do not match">
       <div className="stack gap-16">
         <p style={{ fontSize: 15 }}>
-          The confirmed receipts on {sub.name} come to {money(cost.effective)}. What was entered by
+          The confirmed receipts on {sub.name} come to {money(cost.receiptOverride ?? 0)}. What was
+          entered by
           hand — the bid, the change orders and the amount paid — comes to {money(cost.manual)}, a
           difference of {money(Math.abs(cost.gap))}.
         </p>
