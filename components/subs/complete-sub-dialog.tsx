@@ -13,6 +13,10 @@ import type { ActionResult, SubWithDetail } from "@/lib/types";
  *
  * It is one all-in number covering the main order and every change order, so it
  * replaces the projection outright rather than being added to it.
+ *
+ * Which is why what it offers is never simply the figure already on record: a
+ * change order raised since is not inside that figure, and coming back here is
+ * how it gets folded in. The suggestion is what the sub comes to as it stands.
  */
 export function CompleteSubDialog({
   sub,
@@ -27,13 +31,21 @@ export function CompleteSubDialog({
   const cost = subCost(sub);
   useCloseOnSuccess(state, open, onClose);
 
+  // Nothing on record to base a figure on — an unbid sub opens blank rather than
+  // on a suggested zero.
+  const seeded = sub.paid_amount != null || cost.bid > 0 || cost.changeOrders > 0;
+  const settledWithScopeSince = sub.paid_amount != null && cost.uncoveredChangeOrders > 0;
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={`Mark ${sub.name} done`}
     >
-      <form action={formAction} className="stack gap-16">
+      {/* Remounted whenever the suggestion moves, because this dialog never
+          unmounts — a defaultValue set on the first render would otherwise be
+          the one still sitting there a change order later. */}
+      <form action={formAction} className="stack gap-16" key={`${open}:${cost.allIn}`}>
         <input type="hidden" name="id" value={sub.id} />
 
         <label className="field">
@@ -45,15 +57,24 @@ export function CompleteSubDialog({
             name="paid_amount"
             required
             autoFocus
-            defaultValue={sub.paid_amount ?? (cost.bid || cost.changeOrders ? cost.manual : "")}
+            defaultValue={seeded ? cost.allIn : ""}
             placeholder="0.00"
           />
         </label>
 
         <div className="micro">
-          bid {moneyOrDash(sub.bid_price)}
-          {cost.changeOrders > 0 ? ` + ${money(cost.changeOrders)} change orders` : ""} —
-          this figure covers all of it
+          {settledWithScopeSince ? (
+            <>
+              {money(sub.paid_amount)} paid + {money(cost.uncoveredChangeOrders)} in change orders
+              since — this figure covers all of it
+            </>
+          ) : (
+            <>
+              bid {moneyOrDash(sub.bid_price)}
+              {cost.changeOrders > 0 ? ` + ${money(cost.changeOrders)} change orders` : ""} — this
+              figure covers all of it
+            </>
+          )}
         </div>
 
         <ErrorNote state={state} />

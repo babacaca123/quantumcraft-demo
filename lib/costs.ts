@@ -61,6 +61,15 @@ export interface SubCostBreakdown extends CostBreakdown {
   changeOrders: number;
   /** Change orders raised after the sub was paid off and ticked as paid since. */
   paidChangeOrders: number;
+  /** Change orders the paid amount does not cover — scope it was entered before. */
+  uncoveredChangeOrders: number;
+  /**
+   * What an all-in figure entered right now would have to come to: what is
+   * already paid, plus every change order that figure does not yet cover. The
+   * number the complete dialog offers, so re-entering a paid amount folds in
+   * scope raised since rather than showing the old figure back.
+   */
+  allIn: number;
   /** True while the figure is still bid + change orders rather than what was paid. */
   isProjected: boolean;
 }
@@ -96,7 +105,14 @@ export function subCost(sub: SubWithDetail): SubCostBreakdown {
     .reduce((sum, co) => sum + Number(co.amount ?? 0), 0);
   const paid = sub.paid_amount == null ? null : Number(sub.paid_amount);
 
+  const uncoveredChangeOrders = sub.change_orders
+    .filter((co) => !co.is_covered)
+    .reduce((sum, co) => sum + Number(co.amount ?? 0), 0);
+
   const manual = paid == null ? bid + changeOrders : paid + paidChangeOrders;
+  // Unpaid, nothing is covered and this is the projection again; paid off, it is
+  // that figure plus whatever scope has been raised since.
+  const allIn = (paid ?? bid) + uncoveredChangeOrders;
   const receiptOverride = confirmedReceiptTotal(sub.attachments);
 
   const effective = receiptOverride == null ? manual : receiptOverride + paidChangeOrders;
@@ -109,6 +125,8 @@ export function subCost(sub: SubWithDetail): SubCostBreakdown {
     bid,
     changeOrders,
     paidChangeOrders,
+    uncoveredChangeOrders,
+    allIn,
     isProjected: paid == null,
   };
 }
