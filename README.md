@@ -63,6 +63,9 @@ Both rules live in one place: [`lib/costs.ts`](./lib/costs.ts).
    - [`0004_change_order_covered.sql`](./supabase/migrations/0004_change_order_covered.sql)
      — adds `change_orders.is_covered`, for scope the paid amount already
      covers, so it cannot also be ticked on top of it.
+   - [`0005_acknowledged_gap.sql`](./supabase/migrations/0005_acknowledged_gap.sql)
+     — adds `subcontractors.acknowledged_gap`, the receipt-vs-entered difference
+     already waved through, so the row stops flagging that one.
 3. Under **Authentication → Users**, add the single user account (email +
    password). Under **Authentication → Sign In / Providers**, disable sign-ups —
    this is a single-user tool and there is no registration screen.

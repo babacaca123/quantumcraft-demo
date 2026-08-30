@@ -118,6 +118,26 @@ h3 {
    rather than dropped: the number is still on record, it just isn't counting. */
 .micro.superseded { text-decoration: line-through; opacity: 0.6; }
 
+/* Receipts and the hand-entered figure disagree. Small, and on the row rather
+   than over it: the number it is about is right there, and the total is not in
+   doubt — the receipts are the total either way. */
+.gapwarn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--rust);
+  transition: opacity 0.15s ease;
+}
+.gapwarn:hover { text-decoration: underline; }
+
 /* ---- nav ---- */
 .appnav {
   display: flex;

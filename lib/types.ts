@@ -31,6 +31,8 @@ export interface Subcontractor {
   is_favorite: boolean;
   is_complete: boolean;
   paid_amount: number | null;
+  /** The receipt-vs-entered gap already waved through; null while none has been. */
+  acknowledged_gap: number | null;
   position: number;
   created_at: string;
 }

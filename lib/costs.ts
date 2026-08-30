@@ -9,8 +9,10 @@ import type { Attachment, PhaseWithDetail, SubWithDetail, TaskWithDetail } from 
  * So a sub's paid amount and a task's price count the moment they are typed in,
  * with no receipt required — checks mailed to subs rarely get photographed. If
  * confirmed receipts later show up on that record, their total replaces the
- * manual figure. Unconfirmed receipts never count: OCR misreads amounts, so the
- * user confirms before anything moves.
+ * manual figure outright — on a sub that means the bid, the change orders and
+ * the paid amount all at once, because a receipt is money that actually left the
+ * account and the rest is bookkeeping. Unconfirmed receipts never count: OCR
+ * misreads amounts, so the user confirms before anything moves.
  *
  * Change orders stack on top of a sub's main order until the sub is paid off;
  * see subCost for why they stop stacking at that point.
@@ -49,6 +51,11 @@ export interface CostBreakdown {
   disagrees: boolean;
 }
 
+/** Two decimal places, the only precision any of these figures actually has. */
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 /** Cents, so a float's last bit never reads as a disagreement. */
 function differ(a: number, b: number): boolean {
   return Math.round(a * 100) !== Math.round(b * 100);
@@ -72,6 +79,10 @@ export interface SubCostBreakdown extends CostBreakdown {
   allIn: number;
   /** True while the figure is still bid + change orders rather than what was paid. */
   isProjected: boolean;
+  /** Receipts minus what was entered by hand. Signed, and 0 when none count. */
+  gap: number;
+  /** That gap is real and has not already been waved through. */
+  warn: boolean;
 }
 
 /**
@@ -115,7 +126,10 @@ export function subCost(sub: SubWithDetail): SubCostBreakdown {
   const allIn = (paid ?? bid) + uncoveredChangeOrders;
   const receiptOverride = confirmedReceiptTotal(sub.attachments);
 
-  const effective = receiptOverride == null ? manual : receiptOverride + paidChangeOrders;
+  // Receipts win outright. Not the bid, not the paid amount, and nothing added
+  // on top for change orders: what the receipts come to is what the sub cost.
+  const effective = receiptOverride ?? manual;
+  const gap = receiptOverride == null ? 0 : round2(effective - manual);
 
   return {
     effective,
@@ -128,6 +142,12 @@ export function subCost(sub: SubWithDetail): SubCostBreakdown {
     uncoveredChangeOrders,
     allIn,
     isProjected: paid == null,
+    gap,
+    // Dismissing records the gap, not the shrug — so moving either figure moves
+    // the gap and the warning is back, which is the whole point of it.
+    warn:
+      gap !== 0 &&
+      (sub.acknowledged_gap == null || differ(Number(sub.acknowledged_gap), gap)),
   };
 }
 

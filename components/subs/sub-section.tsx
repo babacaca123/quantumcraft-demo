@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
+  acknowledgeCostGap,
   createChangeOrder,
   createSub,
   deleteChangeOrder,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui";
 import { CompleteSubDialog } from "@/components/subs/complete-sub-dialog";
 import { money, moneyOrDash, subCost } from "@/lib/costs";
+import type { SubCostBreakdown } from "@/lib/costs";
 import type { ActionResult, ChangeOrder, SubWithDetail } from "@/lib/types";
 
 export function SubSection({
@@ -74,6 +76,7 @@ function SubRow({
   const [editing, setEditing] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [addingChangeOrder, setAddingChangeOrder] = useState(false);
+  const [queryingGap, setQueryingGap] = useState(false);
   const { run, pending, error } = useAction();
 
   const cost = subCost(sub);
@@ -117,7 +120,12 @@ function SubRow({
         </div>
 
         {sub.change_orders.map((order) => (
-          <ChangeOrderRow key={order.id} order={order} subIsPaid={sub.is_complete} />
+          <ChangeOrderRow
+            key={order.id}
+            order={order}
+            subIsPaid={sub.is_complete}
+            inReceipts={overridden}
+          />
         ))}
 
         <AttachmentPanel
@@ -156,6 +164,17 @@ function SubRow({
             {cost.disagrees && cost.manual > 0 ? (
               <div className="micro superseded">{money(cost.manual)} entered</div>
             ) : null}
+            {cost.warn ? (
+              <button
+                type="button"
+                className="gapwarn"
+                title="Total paid does not match the projected amount"
+                onClick={() => setQueryingGap(true)}
+              >
+                <WarnIcon />
+                doesn&rsquo;t match
+              </button>
+            ) : null}
           </>
         ) : cost.isProjected ? (
           // bid + change orders, until the actual paid figure replaces both
@@ -180,6 +199,13 @@ function SubRow({
         open={addingChangeOrder}
         onClose={() => setAddingChangeOrder(false)}
       />
+
+      <CostGapDialog
+        sub={sub}
+        cost={cost}
+        open={queryingGap}
+        onClose={() => setQueryingGap(false)}
+      />
     </div>
   );
 }
@@ -192,10 +218,22 @@ function SubRow({
  * is inside it and adds nothing further. Only scope raised *after* that figure
  * was entered is genuinely on top, and that is the one row left with a box —
  * which is what keeps a covered change order from being billed twice.
+ *
+ * Confirmed receipts cross them all off the same way and for the same reason:
+ * the receipt total is the whole sub, this change order included. A box there
+ * would move nothing, so there is not one.
  */
-function ChangeOrderRow({ order, subIsPaid }: { order: ChangeOrder; subIsPaid: boolean }) {
+function ChangeOrderRow({
+  order,
+  subIsPaid,
+  inReceipts,
+}: {
+  order: ChangeOrder;
+  subIsPaid: boolean;
+  inReceipts: boolean;
+}) {
   const { run, pending, error } = useAction();
-  const covered = subIsPaid && order.is_covered;
+  const covered = inReceipts || (subIsPaid && order.is_covered);
 
   return (
     <>
@@ -209,10 +247,16 @@ function ChangeOrderRow({ order, subIsPaid }: { order: ChangeOrder; subIsPaid: b
             disabled={pending || covered}
             aria-label={
               covered
-                ? `${order.description} is covered by the paid amount`
+                ? `${order.description} is already in the total`
                 : `Add ${order.description} to the paid total`
             }
-            title={covered ? "Covered by the paid amount" : "Paid on top of the settled amount"}
+            title={
+              inReceipts
+                ? "Covered by the receipt total"
+                : covered
+                  ? "Covered by the paid amount"
+                  : "Paid on top of the settled amount"
+            }
             onChange={(e) => run(() => setChangeOrderPaid(order.id, e.target.checked))}
           />
         ) : null}
@@ -222,7 +266,11 @@ function ChangeOrderRow({ order, subIsPaid }: { order: ChangeOrder; subIsPaid: b
 
         <span className="amt">
           {money(order.amount)}
-          {covered ? <span className="route"> · in the paid amount</span> : null}
+          {covered ? (
+            <span className="route">
+              {inReceipts ? " · in the receipt total" : " · in the paid amount"}
+            </span>
+          ) : null}
           {subIsPaid && !covered && !order.is_paid ? (
             <span className="rust"> · not in total</span>
           ) : null}
@@ -232,6 +280,86 @@ function ChangeOrderRow({ order, subIsPaid }: { order: ChangeOrder; subIsPaid: b
       </div>
       {error ? <div className="notice">{error}</div> : null}
     </>
+  );
+}
+
+/** The one symbol on the row that means these two numbers disagree. */
+function WarnIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M8 1.9 15 14.2H1Z" />
+      <path d="M8 6.2v3.5" />
+      <path d="M8 11.9h0.01" />
+    </svg>
+  );
+}
+
+/**
+ * What the warning is for, and the only thing to do about it.
+ *
+ * Receipts are the total either way — dismissing changes no figure, it records
+ * that this particular disagreement has been looked at. Which is why it records
+ * the gap rather than the shrug: move either number afterwards and the warning
+ * is back, because that is a different disagreement and nobody has seen it.
+ */
+function CostGapDialog({
+  sub,
+  cost,
+  open,
+  onClose,
+}: {
+  sub: SubWithDetail;
+  cost: SubCostBreakdown;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { run, pending, error } = useAction();
+
+  function dismiss() {
+    run(async () => {
+      const result = await acknowledgeCostGap(sub.id, cost.gap);
+      if (!result.error) onClose();
+      return result;
+    });
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Totals do not match">
+      <div className="stack gap-16">
+        <p style={{ fontSize: 15 }}>
+          The confirmed receipts on {sub.name} come to {money(cost.effective)}. What was entered by
+          hand — the bid, the change orders and the amount paid — comes to {money(cost.manual)}, a
+          difference of {money(Math.abs(cost.gap))}.
+        </p>
+
+        <p style={{ fontSize: 15 }}>
+          The receipts are what count toward the phase total, so nothing is adding up wrong.
+          Dismissing only stops the row flagging it, and it comes back if either figure moves.
+        </p>
+
+        {error ? <div className="notice">{error}</div> : null}
+
+        <div className="dialog-foot">
+          <button type="button" className="btn ghost sm" onClick={onClose} disabled={pending}>
+            Cancel
+          </button>
+          <button type="button" className="btn sm" onClick={dismiss} disabled={pending}>
+            {pending ? "Dismissing…" : "Dismiss"}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

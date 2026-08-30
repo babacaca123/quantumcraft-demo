@@ -229,6 +229,28 @@ export async function uncompleteSub(id: string): Promise<ActionResult> {
   return ok();
 }
 
+/**
+ * "Yes, I know." Records the exact gap between the confirmed receipts and what
+ * was entered by hand, so the row stops flagging that particular disagreement.
+ *
+ * The number is the point: move either figure and the gap moves with it, this no
+ * longer matches, and the warning is back. Nothing here changes a total — the
+ * receipts were already the total (spec §5).
+ */
+export async function acknowledgeCostGap(id: string, gap: number): Promise<ActionResult> {
+  if (!id) return fail("Missing subcontractor.");
+  if (!Number.isFinite(gap)) return fail("Nothing to dismiss.");
+
+  const { supabase } = await requireUser();
+  const { error } = await supabase
+    .from("subcontractors")
+    .update({ acknowledged_gap: gap })
+    .eq("id", id);
+
+  if (error) return fail(error.message);
+  return ok();
+}
+
 export async function deleteSub(id: string): Promise<ActionResult> {
   const { supabase } = await requireUser();
   const { error } = await supabase.from("subcontractors").delete().eq("id", id);
