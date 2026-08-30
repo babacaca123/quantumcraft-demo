@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { deleteAttachment, uploadAttachment } from "@/app/actions/files";
 import { ReceiptEditDialog } from "@/components/attachments/receipt-dialog";
 import { FileThumb } from "@/components/attachments/file-preview";
@@ -127,8 +127,39 @@ export function AttachmentPanel({
   );
 }
 
-/** A bin, drawn — the chip has no room to spell the word out. */
-function TrashIcon() {
+/**
+ * A phone or tablet — something you can hold up to a receipt. Read at click
+ * time rather than on render, so the server and the first paint agree.
+ */
+function handheld(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(pointer: coarse)").matches &&
+    navigator.maxTouchPoints > 0
+  );
+}
+
+/** Photograph the receipt where it is: the camera, on the Scan button. */
+function CameraIcon() {
+  return (
+    <Icon>
+      <path d="M1.4 6.2a1.2 1.2 0 0 1 1.2-1.2h1.9l1-1.6h5l1 1.6h1.9a1.2 1.2 0 0 1 1.2 1.2v6.2a1.2 1.2 0 0 1-1.2 1.2H2.6a1.2 1.2 0 0 1-1.2-1.2Z" />
+      <circle cx="8" cy="9.2" r="2.2" />
+    </Icon>
+  );
+}
+
+/** A file already on the device: the paperclip, on the Attach button. */
+function ClipIcon() {
+  return (
+    <Icon>
+      <path d="M11.7 7.5 7.3 11.9a2.5 2.5 0 0 1-3.5-3.5l5.1-5.1a1.7 1.7 0 0 1 2.4 2.4l-5.1 5.1a0.8 0.8 0 0 1-1.2-1.2l4.5-4.5" />
+    </Icon>
+  );
+}
+
+/** The one drawing style these buttons share: 16px, stroked, no fill. */
+function Icon({ children }: { children: React.ReactNode }) {
   return (
     <svg
       width="14"
@@ -142,11 +173,20 @@ function TrashIcon() {
       aria-hidden="true"
       focusable="false"
     >
+      {children}
+    </svg>
+  );
+}
+
+/** A bin, drawn — the chip has no room to spell the word out. */
+function TrashIcon() {
+  return (
+    <Icon>
       <path d="M2.6 4h10.8" />
       <path d="M6.4 4V2.7h3.2V4" />
       <path d="M4.2 4l.6 9a1 1 0 0 0 1 .9h4.4a1 1 0 0 0 1-.9l.6-9" />
       <path d="M6.7 6.8v4.5M9.3 6.8v4.5" />
-    </svg>
+    </Icon>
   );
 }
 
@@ -224,25 +264,82 @@ function UploadDialog({
   const [state, formAction] = useActionState<ActionResult, FormData>(uploadAttachment, {});
   useCloseOnSuccess(state, open, onClose);
 
+  const formRef = useRef<HTMLFormElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
+
   useEffect(() => {
     if (state.ok && state.id) onUploadedReceipt(state.id);
   }, [state, onUploadedReceipt]);
 
+  // A closed dialog forgets what was in it, so the next file starts from nothing
+  // rather than reopening on the last one's name and receipt tick.
+  useEffect(() => {
+    if (!open) {
+      formRef.current?.reset();
+      setChosen(null);
+    }
+  }, [open]);
+
+  /**
+   * One input, opened two ways. `capture` is what turns the picker into the
+   * camera, and it has to be on the element before the click lands — so this
+   * reaches for the node rather than routing through state and waiting a render.
+   *
+   * Scan only asks for the camera on a device that has one to point at a
+   * receipt; anywhere else it is Attach, PDFs and all. Attach never captures, so
+   * on a phone it offers the camera roll and on a computer the file browser.
+   */
+  function pick(scan: boolean) {
+    const input = fileRef.current;
+    if (!input) return;
+    if (scan && handheld()) {
+      input.setAttribute("capture", "environment");
+      input.setAttribute("accept", "image/*");
+    } else {
+      input.removeAttribute("capture");
+      input.setAttribute("accept", "image/*,application/pdf");
+    }
+    input.click();
+  }
+
   return (
     <Modal open={open} onClose={onClose} title="Attach a file">
-      <form action={formAction} className="stack gap-16">
+      <form ref={formRef} action={formAction} className="stack gap-16">
         <input type="hidden" name="phase_id" value={phaseId} />
         {subcontractorId ? (
           <input type="hidden" name="subcontractor_id" value={subcontractorId} />
         ) : null}
         {taskId ? <input type="hidden" name="task_id" value={taskId} /> : null}
 
-        <label className="field">
+        <div className="field">
           <span>File</span>
-          {/* Photos and PDFs — the two things a receipt ever arrives as, and the
-              two the reader can look at. */}
-          <input type="file" name="file" accept="image/*,application/pdf" required />
-        </label>
+          <div className="filepick">
+            <button type="button" className="linkbtn" onClick={() => pick(true)}>
+              <CameraIcon />
+              Scan
+            </button>
+            <button type="button" className="linkbtn" onClick={() => pick(false)}>
+              <ClipIcon />
+              Attach
+            </button>
+            <span className={`filepick-name ${chosen ? "set" : ""}`}>
+              {chosen ?? "nothing chosen yet"}
+            </span>
+
+            {/* Photos and PDFs — the two things a receipt ever arrives as, and
+                the two the reader can look at. Not `required`: it is hidden, and
+                a hidden required field fails validation with nothing on screen
+                to explain it. The action says "Choose a file to upload." */}
+            <input
+              ref={fileRef}
+              type="file"
+              name="file"
+              accept="image/*,application/pdf"
+              onChange={(e) => setChosen(e.target.files?.[0]?.name ?? null)}
+            />
+          </div>
+        </div>
 
         <label className="checkrow">
           <input type="checkbox" name="is_receipt" />

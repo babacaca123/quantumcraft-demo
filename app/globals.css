@@ -358,8 +358,8 @@ section.block {
 .subrow a { color: var(--route-deep); }
 
 /* ---- form controls ---- */
-label.field { display: flex; flex-direction: column; gap: 5px; }
-label.field > span {
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > span {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 12px;
@@ -390,6 +390,19 @@ input[type="file"] {
   font-size: 12px;
   width: 100%;
 }
+
+/* Two ways to put the same file in — the camera, or the file system — over one
+   hidden input, because only one file is ever going up. */
+.filepick { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.filepick input[type="file"] { display: none; }
+.filepick-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--slate);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.filepick-name.set { color: var(--ink); }
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--route);
