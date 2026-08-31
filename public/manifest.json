@@ -1,0 +1,26 @@
+{
+  "name": "House Build Tracker",
+  "short_name": "Build Tracker",
+  "description": "Phase-based cost and task tracker for an owner-builder: subcontractors, tasks, receipts, and a final profit report.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDE6D6",
+  "theme_color": "#EDE6D6",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

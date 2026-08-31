@@ -14,7 +14,12 @@ export const config = {
     /*
      * Everything except Next internals and static assets — those never need a
      * session refresh and skipping them keeps navigation snappy.
+     *
+     * The PWA shell is on that list for a second reason. A service worker that
+     * answers with a redirect to the login page does not register at all, and a
+     * manifest behind the same redirect never offers the install. Both are build
+     * output with nothing personal in them, so neither belongs behind the gate.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|workbox-.*\\.js|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

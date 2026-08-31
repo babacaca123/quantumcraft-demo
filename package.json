@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"
@@ -19,6 +19,7 @@
     "@supabase/supabase-js": "^2.112.3",
     "heic-to": "^1.5.2",
     "next": "^16.3.1",
+    "next-pwa": "^5.6.0",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
