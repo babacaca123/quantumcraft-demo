@@ -22,30 +22,43 @@ import type { AttachmentRow } from "@/lib/data";
  * itself stays quiet.
  */
 export function FileBrowser({ files }: { files: AttachmentRow[] }) {
-  const [selected, setSelected] = useState<AttachmentRow | null>(null);
-  const [editing, setEditing] = useState<AttachmentRow | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  /**
+   * The dialogs hold an id and look the row up; they do not hold a copy of it.
+   *
+   * Deleting a file takes its row out of `files`, and a sheet holding a copy
+   * went on showing the file afterwards — the picture gone, the buttons still
+   * there, a Delete that now deletes nothing. Looking the row up means the sheet
+   * closes itself the moment its subject stops existing, whoever removed it, and
+   * shows current figures rather than the ones that were on screen when it
+   * opened.
+   */
+  const selected = files.find((file) => file.id === selectedId) ?? null;
+  const editing = files.find((file) => file.id === editingId) ?? null;
 
   return (
     <>
       <div className="filegrid">
         {files.map((file) => (
-          <FileTile key={file.id} file={file} onOpen={() => setSelected(file)} />
+          <FileTile key={file.id} file={file} onOpen={() => setSelectedId(file.id)} />
         ))}
       </div>
 
       <FileDetail
         file={selected}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedId(null)}
         onEdit={() => {
-          setEditing(selected);
-          setSelected(null);
+          setEditingId(selectedId);
+          setSelectedId(null);
         }}
       />
 
       <ReceiptEditDialog
         file={editing}
         signedUrl={editing?.signed_url ?? null}
-        onClose={() => setEditing(null)}
+        onClose={() => setEditingId(null)}
       />
     </>
   );

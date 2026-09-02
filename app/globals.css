@@ -404,6 +404,18 @@ section.block {
   text-transform: uppercase;
   color: var(--slate);
 }
+/* Every field carries a 16px font, and the size is set here rather than on each
+   kind of field below so that nothing can be missed.
+
+   Below 16px, Safari and Chrome on a phone zoom the page in when a field takes
+   focus and leave it zoomed: the form ends up wider than the screen, and the
+   next field has to be found by panning. It is not a preference either — the
+   threshold is fixed, and 15px triggers it as surely as 11px does. */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -413,7 +425,6 @@ input[type="number"],
 select,
 textarea {
   font-family: var(--font-mono);
-  font-size: 13px;
   color: var(--ink);
   background: var(--kraft);
   border: 1px solid var(--rule-strong);
@@ -424,8 +435,27 @@ textarea {
 }
 input[type="file"] {
   font-family: var(--font-mono);
-  font-size: 12px;
   width: 100%;
+}
+
+/* The theme's own sizes, restored where there is nothing to prevent: a fine
+   pointer is a mouse or a trackpad, and no desktop browser has ever done this.
+   So a computer gets the form exactly as it was drawn, and a phone gets fields
+   that are easier to hit than the 13px ones were — a better trade than scaling
+   the glyphs back down with a transform, which would buy a size nobody wanted
+   on a phone at the price of blurred text and sub-pixel borders. */
+@media (pointer: fine) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 13px;
+  }
+  input[type="file"] { font-size: 12px; }
 }
 
 /* Two ways to put the same file in — the camera, or the file system — over one
