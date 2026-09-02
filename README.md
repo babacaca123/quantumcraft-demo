@@ -159,6 +159,14 @@ authenticated request can only ever see its own rows. Files live in a private
 bucket keyed `<user id>/<uuid>-<filename>`; the app hands out one-hour signed
 URLs rather than making anything public.
 
+The bytes of an upload never pass through the app. A Server Action request body
+is capped at 1 MB and a serverless function's at 4.5 MB, and a photo off a phone
+clears both without trying, so posting the file to an action failed on every
+phone and on no laptop. Instead `createUploadTarget` mints the key — it carries
+the user id the bucket policy checks — and signs a pass good for that one path,
+the browser uploads to Storage against it, and `recordAttachment` writes the row
+about a file that is already there.
+
 ---
 
 ## Theme

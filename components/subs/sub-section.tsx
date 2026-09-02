@@ -261,20 +261,18 @@ function ChangeOrderRow({
           />
         ) : null}
 
-        <span>change order</span>
-        <span className={covered ? "strike" : ""}>{order.description}</span>
+        <span className="subrow-label">change order</span>
+        <span className={`subrow-desc ${covered ? "strike" : ""}`}>{order.description}</span>
 
-        <span className="amt">
-          {money(order.amount)}
-          {covered ? (
-            <span className="route">
-              {inReceipts ? " · in the receipt total" : " · in the paid amount"}
-            </span>
-          ) : null}
-          {subIsPaid && !covered && !order.is_paid ? (
-            <span className="rust"> · not in total</span>
-          ) : null}
-        </span>
+        <span className="amt">{money(order.amount)}</span>
+        {covered ? (
+          <span className="subrow-note route">
+            {inReceipts ? "in the receipt total" : "in the paid amount"}
+          </span>
+        ) : null}
+        {subIsPaid && !covered && !order.is_paid ? (
+          <span className="subrow-note rust">not in total</span>
+        ) : null}
 
         <DeleteButton onDelete={() => deleteChangeOrder(order.id)} label="Remove" />
       </div>

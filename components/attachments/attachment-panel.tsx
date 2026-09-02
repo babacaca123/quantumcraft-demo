@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { deleteAttachment, uploadAttachment } from "@/app/actions/files";
+import { useEffect, useRef, useState } from "react";
+import { createUploadTarget, deleteAttachment, recordAttachment } from "@/app/actions/files";
 import { ReceiptEditDialog } from "@/components/attachments/receipt-dialog";
 import { FileThumb } from "@/components/attachments/file-preview";
-import { ErrorNote, Modal, SubmitButton, useAction, useCloseOnSuccess } from "@/components/ui";
+import { Modal, useAction } from "@/components/ui";
 import { money } from "@/lib/costs";
-import { shortName } from "@/lib/files";
-import type { ActionResult, Attachment } from "@/lib/types";
+import { contentTypeFor, MAX_UPLOAD_BYTES, shortName } from "@/lib/files";
+import { createClient } from "@/lib/supabase/client";
+import type { Attachment } from "@/lib/types";
 
 /**
  * Files on a sub or a task (spec §6). Receipts, photos, plans, checks — anything.
@@ -261,16 +262,12 @@ function UploadDialog({
   subcontractorId?: string;
   taskId?: string;
 }) {
-  const [state, formAction] = useActionState<ActionResult, FormData>(uploadAttachment, {});
-  useCloseOnSuccess(state, open, onClose);
-
   const formRef = useRef<HTMLFormElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const receiptRef = useRef<HTMLInputElement>(null);
   const [chosen, setChosen] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (state.ok && state.id) onUploadedReceipt(state.id);
-  }, [state, onUploadedReceipt]);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // A closed dialog forgets what was in it, so the next file starts from nothing
   // rather than reopening on the last one's name and receipt tick.
@@ -278,6 +275,7 @@ function UploadDialog({
     if (!open) {
       formRef.current?.reset();
       setChosen(null);
+      setError(null);
     }
   }, [open]);
 
@@ -303,23 +301,96 @@ function UploadDialog({
     input.click();
   }
 
+  /**
+   * The file goes from here to Storage and through nothing else on the way.
+   *
+   * It used to be posted to a Server Action, whose request body is capped at
+   * 1 MB — which a laptop screenshot slips under and a photo never does, so
+   * every attempt from a phone came back a server error. The server now hands
+   * out a pass for one path, the browser uploads against it directly, and the
+   * action that follows only writes the row.
+   */
+  async function upload(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const file = fileRef.current?.files?.[0];
+    if (!file || file.size === 0) {
+      setError("Choose a file to upload.");
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError("That file is larger than 25 MB.");
+      return;
+    }
+
+    const isReceipt = receiptRef.current?.checked ?? false;
+    const contentType = contentTypeFor(file);
+    setError(null);
+    setPending(true);
+
+    try {
+      const target = await createUploadTarget({
+        phaseId,
+        subcontractorId,
+        taskId,
+        fileName: file.name,
+        size: file.size,
+      });
+      if (target.error || !target.path || !target.token) {
+        setError(target.error ?? "Could not start the upload.");
+        return;
+      }
+
+      const { error: uploadError } = await createClient()
+        .storage.from("attachments")
+        .uploadToSignedUrl(target.path, target.token, file, { contentType });
+      if (uploadError) {
+        setError(uploadError.message);
+        return;
+      }
+
+      const result = await recordAttachment({
+        path: target.path,
+        phaseId,
+        subcontractorId,
+        taskId,
+        fileName: file.name,
+        mimeType: contentType ?? null,
+        size: file.size,
+        isReceipt,
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      if (result.id) onUploadedReceipt(result.id);
+      onClose();
+    } catch (cause) {
+      // A connection that drops halfway through lands here rather than as a
+      // rejected promise nobody is holding.
+      setError(cause instanceof Error ? cause.message : "The upload did not go through.");
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <Modal open={open} onClose={onClose} title="Attach a file">
-      <form ref={formRef} action={formAction} className="stack gap-16">
-        <input type="hidden" name="phase_id" value={phaseId} />
-        {subcontractorId ? (
-          <input type="hidden" name="subcontractor_id" value={subcontractorId} />
-        ) : null}
-        {taskId ? <input type="hidden" name="task_id" value={taskId} /> : null}
-
+      <form ref={formRef} onSubmit={upload} className="stack gap-16">
         <div className="field">
           <span>File</span>
           <div className="filepick">
-            <button type="button" className="linkbtn" onClick={() => pick(true)}>
+            <button type="button" className="linkbtn" onClick={() => pick(true)} disabled={pending}>
               <CameraIcon />
               Scan
             </button>
-            <button type="button" className="linkbtn" onClick={() => pick(false)}>
+            <button
+              type="button"
+              className="linkbtn"
+              onClick={() => pick(false)}
+              disabled={pending}
+            >
               <ClipIcon />
               Attach
             </button>
@@ -330,7 +401,7 @@ function UploadDialog({
             {/* Photos and PDFs — the two things a receipt ever arrives as, and
                 the two the reader can look at. Not `required`: it is hidden, and
                 a hidden required field fails validation with nothing on screen
-                to explain it. The action says "Choose a file to upload." */}
+                to explain it. The check is in `upload` above. */}
             <input
               ref={fileRef}
               type="file"
@@ -342,7 +413,7 @@ function UploadDialog({
         </div>
 
         <label className="checkrow">
-          <input type="checkbox" name="is_receipt" />
+          <input ref={receiptRef} type="checkbox" name="is_receipt" />
           <span>
             This is a receipt.
             <span className="micro block">
@@ -352,15 +423,15 @@ function UploadDialog({
           </span>
         </label>
 
-        <ErrorNote state={state} />
+        {error ? <div className="notice">{error}</div> : null}
 
         <div className="dialog-foot">
-          <button type="button" className="btn ghost sm" onClick={onClose}>
+          <button type="button" className="btn ghost sm" onClick={onClose} disabled={pending}>
             Cancel
           </button>
-          <SubmitButton className="btn sm" pendingLabel="Uploading…">
-            Upload
-          </SubmitButton>
+          <button type="submit" className="btn sm" disabled={pending}>
+            {pending ? "Uploading…" : "Upload"}
+          </button>
         </div>
       </form>
     </Modal>

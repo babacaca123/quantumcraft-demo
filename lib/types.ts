@@ -109,6 +109,20 @@ export interface ActionResult {
 }
 
 /**
+ * Somewhere to put one file, and a one-shot pass to put it there.
+ *
+ * The upload itself goes from the browser straight to Storage, so what comes
+ * back from the server is permission rather than a destination it will forward
+ * anything to.
+ */
+export interface UploadTarget {
+  error?: string;
+  /** The key the file is to be written to: `<user id>/<uuid>-<name>`. */
+  path?: string;
+  token?: string;
+}
+
+/**
  * What `/api/extract-receipt` reads off a receipt (spec §6). Every field is
  * nullable on purpose: an unreadable figure comes back empty rather than
  * guessed, because the user is about to check it against real money.

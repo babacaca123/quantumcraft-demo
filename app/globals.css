@@ -332,11 +332,15 @@ section.block {
   margin-bottom: 10px;
 }
 .item:last-child { margin-bottom: 0; }
+/* A grid track is as wide as its widest word unless told otherwise, and one
+   long name or figure would otherwise carry the whole row out past the tile. */
+.item > * { min-width: 0; }
 .item-name {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 16px;
   letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
 }
 .item-meta {
   font-family: var(--font-mono);
@@ -347,7 +351,9 @@ section.block {
   display: flex;
   flex-wrap: wrap;
   gap: 3px 14px;
+  min-width: 0;
 }
+.item-meta > span { overflow-wrap: anywhere; }
 .item-amounts {
   font-family: var(--font-mono);
   font-size: 13px;
@@ -361,11 +367,17 @@ section.block {
   border-radius: 3px;
 }
 
-/* nested rows: change orders and attachments hanging off an item */
+/* nested rows: change orders and attachments hanging off an item.
+
+   On a phone this row runs out of width long before it runs out of things to
+   say, so it wraps rather than pushing the amount out through the side of the
+   tile. Everything that is a figure or a fixed phrase stays whole; the
+   description is the one part that gives. */
 .subrow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   padding: 5px 0 5px 14px;
   border-left: 2px solid var(--rule);
   margin-top: 6px;
@@ -373,6 +385,11 @@ section.block {
   font-size: 12px;
   color: var(--slate);
 }
+.subrow-label { white-space: nowrap; }
+.subrow-desc { min-width: 0; overflow-wrap: anywhere; }
+/* Its own item rather than a tail on the amount: together they are wider than a
+   narrow screen has, and one of the two has to be free to drop a line. */
+.subrow-note { white-space: nowrap; }
 .subrow .amt { margin-left: auto; color: var(--ink); white-space: nowrap; }
 .subrow input[type="checkbox"] { margin-top: 0; width: 15px; height: 15px; }
 .subrow a { color: var(--route-deep); }
@@ -813,7 +830,10 @@ footer.appfoot .foot-meta {
   .ledger-row { grid-template-columns: 40px 1fr; }
   .ledger-price { grid-column: 2; text-align: left; margin-top: 4px; }
   .item { grid-template-columns: 26px 1fr; padding: 14px; }
-  .item-amounts { grid-column: 2; text-align: left; margin-top: 6px; }
+  .item-amounts { grid-column: 2; text-align: left; margin-top: 6px; white-space: normal; }
+  /* Pushed to the right it strands itself on a line of its own; left-aligned
+     it simply carries on after the description. */
+  .subrow .amt { margin-left: 0; }
   .filegrid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
   .deflist { grid-template-columns: 90px 1fr; }
   footer.appfoot { flex-direction: column; align-items: flex-start; }

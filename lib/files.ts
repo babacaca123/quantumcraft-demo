@@ -6,6 +6,44 @@
  */
 
 /**
+ * The ceiling on one attachment. Shared, because the browser checks it before
+ * spending a minute of someone's data on a file the server will refuse.
+ */
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+/**
+ * What a file is, for the times the browser declines to say.
+ *
+ * A camera capture on iOS arrives with an empty `type` often enough to matter,
+ * and whatever goes into Storage is what comes back out of it — so the name is
+ * asked when the browser has nothing. Anything unrecognised stays unset rather
+ * than being guessed at.
+ */
+export function contentTypeFor(file: File): string | undefined {
+  if (file.type) return file.type;
+
+  switch (/\.([a-z0-9]+)$/i.exec(file.name)?.[1]?.toLowerCase()) {
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "gif":
+      return "image/gif";
+    case "webp":
+      return "image/webp";
+    case "heic":
+      return "image/heic";
+    case "heif":
+      return "image/heif";
+    case "pdf":
+      return "application/pdf";
+    default:
+      return undefined;
+  }
+}
+
+/**
  * HEIC is what an iPhone shoots, so it turns up constantly on a build site — and
  * no browser but Safari will draw one in an `<img>`. It is an image, but it has
  * to be decoded first, so it is called out separately everywhere it matters.
